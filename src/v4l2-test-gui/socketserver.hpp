@@ -15,6 +15,9 @@ signals:
     void imageReceived(const Image &image);
     void disconnected();
 
+public slots:
+    void listen(int port);
+
 private slots:
     void onNewConnection();
     void onDisconnected();

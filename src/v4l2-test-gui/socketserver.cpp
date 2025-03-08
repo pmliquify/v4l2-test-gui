@@ -9,18 +9,22 @@ SocketServer::SocketServer(QObject* parent) :
     m_headerReceived(false)
 {
     connect(m_server, &QTcpServer::newConnection, this, &SocketServer::onNewConnection);
-
-    if (!m_server->listen(QHostAddress::Any, 9000)) {
-        qDebug() << tr("Unable to bind port %1").arg(m_server->errorString());
-    } else {
-        qDebug() << tr("Listen on port %1").arg(m_server->serverPort());
-    }
 }
 
 SocketServer::~SocketServer()
 {
     delete m_image;
     m_image = NULL;
+}
+
+void SocketServer::listen(int port)
+{
+    m_server->close();
+    if (!m_server->listen(QHostAddress::Any, port)) {
+        qDebug() << tr("Unable to bind port %1").arg(m_server->errorString());
+    } else {
+        qDebug() << tr("Listen on port %1").arg(m_server->serverPort());
+    }
 }
 
 void SocketServer::onNewConnection()

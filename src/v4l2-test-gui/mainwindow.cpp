@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_server(this),
     m_connected(false),
     m_connectionStatus(nullptr),
+    m_port(nullptr),
     m_imageReceived(false),
     m_fpsSequence(0),
     m_fpsTimestamp(0),
@@ -25,12 +26,29 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFitToWindow, &QAction::triggered, this, &Window::fitImageToWindow);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
+
+    setupPort();
     setConnectionStatus(false);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::setupPort()
+{
+    if (m_port == nullptr) {
+        m_port = new QSpinBox(this);
+        m_port->setPrefix(tr("Port: "));
+        m_port->setFocusPolicy(Qt::NoFocus);
+        m_port->setRange(1, 65535);
+        m_port->setValue(9000);
+        connect(m_port, QOverload<int>::of(&QSpinBox::valueChanged), 
+            [this](int port) { m_server.listen(port); });
+        statusBar()->addPermanentWidget(m_port);
+        m_server.listen(m_port->value());
+    }
 }
 
 void MainWindow::paintEvent(QPaintEvent *event) 
