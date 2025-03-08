@@ -7,11 +7,14 @@
 MainWindow::MainWindow(QWidget *parent) :
     Window(parent),
     ui(new Ui::MainWindow),
+    m_server(this),
+    m_connected(false),
+    m_connectionStatus(nullptr),
     m_imageReceived(false),
-    m_showRawImage(false),
     m_fpsSequence(0),
     m_fpsTimestamp(0),
-    m_fps(0.0)
+    m_fps(0.0),
+    m_showRawImage(false)
 {
     ui->setupUi(this);
     setWindowTitle(tr("v4l2-test-gui (%1)").arg(V4L2TEST_VERSION));
@@ -21,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
     connect(ui->actionFitToWindow, &QAction::triggered, this, &Window::fitImageToWindow);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
+    connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
+    setConnectionStatus(false);
 }
 
 MainWindow::~MainWindow()
@@ -54,12 +59,11 @@ QString pixelFormat(const Image &image)
 
 void MainWindow::onImageReceived(const Image &image) 
 {
+    m_imageReceived = true;
     cv::Mat cvImage = convert(image, m_showRawImage);
     setImage(cvMatToQImage(cvImage));
-    
-    if (!m_imageReceived) {
-        ui->actionSaveImage->setEnabled(true);
-        fitImageToWindow();
+
+    if (!m_connected) {
         m_fpsSequence = image.sequence();
         m_fpsTimestamp = image.timestamp();
     }
@@ -74,8 +78,12 @@ void MainWindow::onImageReceived(const Image &image)
         .arg(image.bytesPerLine()).arg(image.imageSize())
         .arg(m_fps, 0, 'f', 1)
         .arg(image.sequence(), 5, 10, QChar('0')).arg(image.timestamp(), 8));
-    
-    m_imageReceived = true;
+    setConnectionStatus(true);
+}
+
+void MainWindow::onDisconnected()
+{
+    setConnectionStatus(false);
 }
 
 void MainWindow::setShowRawImage(bool checked)
@@ -97,4 +105,18 @@ void MainWindow::saveImage()
     }
 
     image().save(fileName);
+}
+
+void MainWindow::setConnectionStatus(bool connected)
+{
+    if (m_connectionStatus == nullptr) {
+        m_connectionStatus = new QLabel(this);
+        m_connectionStatus->setAlignment(Qt::AlignCenter);
+        statusBar()->addPermanentWidget(m_connectionStatus);
+    }
+
+    m_connected = connected;
+    m_connectionStatus->setText(connected ? tr("Connected") : tr("Disconnected"));
+    m_connectionStatus->setPixmap(
+        QPixmap(connected ? ":/icons/connected.png" : ":/icons/disconnected.png"));
 }

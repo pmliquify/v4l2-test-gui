@@ -13,9 +13,11 @@ public:
 
 signals:
     void imageReceived(const Image &image);
+    void disconnected();
 
 private slots:
     void onNewConnection();
+    void onDisconnected();
     void readData();
 
 private:

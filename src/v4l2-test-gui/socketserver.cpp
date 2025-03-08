@@ -29,9 +29,22 @@ void SocketServer::onNewConnection()
         QTcpSocket* clientSocket = m_server->nextPendingConnection();
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &SocketServer::readData);
+        connect(clientSocket, &QTcpSocket::disconnected, this, &SocketServer::onDisconnected);
         m_headerReceived = false;
 
         qDebug() << tr("Client connected!");
+    }
+}
+
+void SocketServer::onDisconnected()
+{
+    QTcpSocket* clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if (clientSocket) {
+        emit disconnected();
+        clientSocket->close();
+        clientSocket->deleteLater();
+
+        qDebug() << tr("Client disconnected!");
     }
 }
 

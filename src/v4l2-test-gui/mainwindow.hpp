@@ -20,15 +20,19 @@ protected:
 
 private slots:
     void onImageReceived(const Image &image);
+    void onDisconnected();
     void setShowRawImage(bool checked);
     void saveImage();
 
 private:
     Ui::MainWindow* ui;
     SocketServer    m_server;
+    bool            m_connected;
+    QLabel*         m_connectionStatus;
+    bool            m_imageReceived;
     int             m_fpsSequence;
     int             m_fpsTimestamp;
     double          m_fps;
-    bool            m_imageReceived;
     bool            m_showRawImage;
+    void setConnectionStatus(bool connected);
 };

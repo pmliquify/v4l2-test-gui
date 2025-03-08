@@ -71,6 +71,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="mainwindow.qrc"/>
+ </resources>
  <connections/>
 </ui>

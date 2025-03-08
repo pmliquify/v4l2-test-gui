@@ -29,6 +29,8 @@ set(SOURCES
 set(HEADERS
     window.hpp
     mainwindow.hpp
+    mainwindow.ui
+    mainwindow.qrc
     convert.hpp
     socketserver.hpp
 )
