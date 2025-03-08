@@ -29,7 +29,7 @@ void SocketServer::onNewConnection()
         QTcpSocket* clientSocket = m_server->nextPendingConnection();
 
         connect(clientSocket, &QTcpSocket::readyRead, this, &SocketServer::readData);
-        connect(clientSocket, &QTcpSocket::disconnected, clientSocket, &QTcpSocket::deleteLater);
+        m_headerReceived = false;
 
         qDebug() << tr("Client connected!");
     }
