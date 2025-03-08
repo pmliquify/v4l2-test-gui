@@ -13,7 +13,6 @@ void Window::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     QPainter painter(this);
-    // painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.translate(m_imageOffset);
     painter.scale(m_scaleFactor, m_scaleFactor);
     painter.drawImage(0, 0, m_image);
@@ -67,8 +66,13 @@ QImage Window::image() const
 
 void Window::setImage(const QImage &image) 
 {
+    bool fitToWindow = m_image.size() != image.size();
     m_image = image;
-    update();
+    if (fitToWindow) {
+        fitImageToWindow();
+    } else {
+        update();
+    }
 }
 
 void Window::fitImageToWindow() 
