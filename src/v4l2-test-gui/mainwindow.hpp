@@ -37,6 +37,7 @@ private:
     double          m_fps;
     bool            m_showRawImage;
 
-    void setupPort();
-    void setConnectionStatus(bool connected);
+    void setupStatusBar();
+    void updateImageInfo(const Image &image);
+    void updateConnectionStatus(bool connected);
 };

@@ -20,6 +20,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowTitle(tr("v4l2-test-gui (%1)").arg(V4L2TEST_VERSION));
     resize(800, 600);
+    setupStatusBar();
 
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
@@ -27,29 +28,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
-
-    setupPort();
-    setConnectionStatus(false);
+    
+    updateConnectionStatus(false);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-void MainWindow::setupPort()
-{
-    if (m_port == nullptr) {
-        m_port = new QSpinBox(this);
-        m_port->setPrefix(tr("Port: "));
-        m_port->setFocusPolicy(Qt::NoFocus);
-        m_port->setRange(1, 65535);
-        m_port->setValue(9000);
-        connect(m_port, QOverload<int>::of(&QSpinBox::valueChanged), 
-            [this](int port) { m_server.listen(port); });
-        statusBar()->addPermanentWidget(m_port);
-        m_server.listen(m_port->value());
-    }
 }
 
 void MainWindow::paintEvent(QPaintEvent *event) 
@@ -92,17 +77,13 @@ void MainWindow::onImageReceived(const Image &image)
         m_fpsTimestamp = image.timestamp();
     }
 
-    statusBar()->showMessage(tr("(%1x%2) %3, line: %4 bytes, size: %5 bytes, %6 fps [#%7, ts: %8 ms]")
-        .arg(image.width()).arg(image.height()).arg(pixelFormat(image))
-        .arg(image.bytesPerLine()).arg(image.imageSize())
-        .arg(m_fps, 0, 'f', 1)
-        .arg(image.sequence(), 5, 10, QChar('0')).arg(image.timestamp(), 8));
-    setConnectionStatus(true);
+    updateImageInfo(image);
+    updateConnectionStatus(true);
 }
 
 void MainWindow::onDisconnected()
 {
-    setConnectionStatus(false);
+    updateConnectionStatus(false);
 }
 
 void MainWindow::setShowRawImage(bool checked)
@@ -135,14 +116,35 @@ void MainWindow::setAllwaysOnTop(bool checked)
     show();
 }
 
-void MainWindow::setConnectionStatus(bool connected)
+void MainWindow::setupStatusBar()
 {
-    if (m_connectionStatus == nullptr) {
-        m_connectionStatus = new QLabel(this);
-        m_connectionStatus->setAlignment(Qt::AlignCenter);
-        statusBar()->addPermanentWidget(m_connectionStatus);
-    }
+    m_port = new QSpinBox(this);
+    m_port->setPrefix(tr("Port: "));
+    m_port->setFocusPolicy(Qt::NoFocus);
+    m_port->setRange(1, 65535);
+    m_port->setValue(9000);
+    connect(m_port, QOverload<int>::of(&QSpinBox::valueChanged), 
+        [this](int port) { m_server.listen(port); });
+    statusBar()->addPermanentWidget(m_port);
+    m_server.listen(m_port->value());
 
+    m_connectionStatus = new QLabel(this);
+    m_connectionStatus->setAlignment(Qt::AlignCenter);
+    statusBar()->addPermanentWidget(m_connectionStatus);
+}
+
+void MainWindow::updateImageInfo(const Image &image)
+{
+    setWindowTitle(tr("%1x%2, %3, line: %4 bytes, size: %5 bytes")
+        .arg(image.width()).arg(image.height()).arg(pixelFormat(image))
+        .arg(image.bytesPerLine()).arg(image.imageSize()));
+    statusBar()->showMessage(tr("%1 fps - #%2 - ts: %3 ms")
+        .arg(m_fps, 0, 'f', 1)
+        .arg(image.sequence(), 5, 10, QChar('0')).arg(image.timestamp(), 8));
+}
+
+void MainWindow::updateConnectionStatus(bool connected)
+{
     m_connected = connected;
     m_connectionStatus->setText(connected ? tr("Connected") : tr("Disconnected"));
     m_connectionStatus->setPixmap(
