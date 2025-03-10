@@ -23,6 +23,7 @@ private slots:
     void onDisconnected();
     void setShowRawImage(bool checked);
     void saveImage();
+    void setAllwaysOnTop(bool checked);
 
 private:
     Ui::MainWindow* ui;

@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
     connect(ui->actionFitToWindow, &QAction::triggered, this, &Window::fitImageToWindow);
+    connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
 
@@ -123,6 +124,15 @@ void MainWindow::saveImage()
     }
 
     image().save(fileName);
+}
+
+void MainWindow::setAllwaysOnTop(bool checked)
+{
+    Qt::WindowFlags flags = checked ? 
+        windowFlags() | Qt::WindowStaysOnTopHint : 
+        windowFlags() & ~Qt::WindowStaysOnTopHint;
+    setWindowFlags(flags);
+    show();
 }
 
 void MainWindow::setConnectionStatus(bool connected)
