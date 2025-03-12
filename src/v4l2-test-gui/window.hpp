@@ -21,10 +21,12 @@ protected:
     
 public slots:
     void fitImageToWindow();
+    void fitImageToHeight(bool fitImageToHeight);
 
 private:
     QImage      m_image;
     double      m_scaleFactor;
+    bool        m_fitImageToHeight;
     bool        m_dragging;
     QPoint      m_lastMousePos;
     QPoint      m_imageOffset;

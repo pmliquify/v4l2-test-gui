@@ -1,12 +1,13 @@
 #include "window.hpp"
 
 
-Window::Window(QWidget *parent)
-    : QMainWindow(parent),
-      m_scaleFactor(1.0),
-      m_dragging(false),
-      m_imageOffset(0, 0),
-      m_drawingRect(false)
+Window::Window(QWidget *parent) :
+    QMainWindow(parent),
+    m_scaleFactor(1.0),
+    m_fitImageToHeight(false),
+    m_dragging(false),
+    m_imageOffset(0, 0),
+    m_drawingRect(false)
 {
 }
 
@@ -105,9 +106,19 @@ void Window::setImage(const QImage &image)
 
 void Window::fitImageToWindow() 
 {
-    m_scaleFactor = (double)width() / m_image.width();
+    if (m_fitImageToHeight) {
+        m_scaleFactor = (double)height() / m_image.height();
+    } else {
+        m_scaleFactor = (double)width() / m_image.width();
+    }
     m_imageOffset = QPoint(0, 0);
     update();
+}
+
+void Window::fitImageToHeight(bool fitImageToHeight)
+{
+    m_fitImageToHeight = fitImageToHeight;
+    fitImageToWindow();
 }
 
 QRect Window::rasterizedImageRect() const 

@@ -25,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
     connect(ui->actionFitToWindow, &QAction::triggered, this, &Window::fitImageToWindow);
+    connect(ui->actionFitToHeight, &QAction::toggled, this, &Window::fitImageToHeight);
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
