@@ -28,4 +28,10 @@ private:
     bool        m_dragging;
     QPoint      m_lastMousePos;
     QPoint      m_imageOffset;
+    bool        m_drawingRect;
+    QPoint      m_rectStart;
+    QPoint      m_rectEnd;
+
+    QRect rasterizedImageRect() const;
+    QRect widgetRectFromImageRect(const QRect &imageRect) const;
 };
