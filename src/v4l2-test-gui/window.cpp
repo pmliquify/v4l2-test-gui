@@ -105,7 +105,9 @@ void Window::setImage(const QImage &image)
 
 void Window::fitImageToWindow() 
 {
-    m_scaleFactor = (double)width() / m_image.width();
+    double widthRatio = (double)width() / m_image.width();
+    double heightRatio = (double)height() / m_image.height();
+    m_scaleFactor = qMin(widthRatio, heightRatio);
     m_imageOffset = QPoint(0, 0);
     update();
 }
