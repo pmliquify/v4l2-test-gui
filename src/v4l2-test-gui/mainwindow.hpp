@@ -32,6 +32,7 @@ private:
     QLabel*         m_connectionStatus;
     QSpinBox*       m_port;
     bool            m_imageReceived;
+    bool            m_imageConverted;
     int             m_fpsSequence;
     int             m_fpsTimestamp;
     double          m_fps;

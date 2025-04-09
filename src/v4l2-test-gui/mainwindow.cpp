@@ -12,6 +12,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_connectionStatus(nullptr),
     m_port(nullptr),
     m_imageReceived(false),
+    m_imageConverted(false),
     m_fpsSequence(0),
     m_fpsTimestamp(0),
     m_fps(0.0),
@@ -40,11 +41,18 @@ MainWindow::~MainWindow()
 void MainWindow::paintEvent(QPaintEvent *event) 
 {
     Q_UNUSED(event);
-    if (!m_imageReceived) {
+    if (!m_imageReceived || !m_imageConverted) {
         QPainter painter(this);
-        painter.setPen(Qt::darkGray);
         painter.setFont(QFont("Arial", 20));
-        painter.drawText(rect(), Qt::AlignCenter, tr("./v4l2-test client --ip <host>"));
+
+        if (m_imageReceived && !m_imageConverted) {
+            painter.setPen(Qt::darkRed);
+            painter.drawText(rect(), Qt::AlignCenter, tr("Unable to convert Image."
+                "\nPixelformat not supported!"));
+        } else {
+            painter.setPen(Qt::darkGray);
+            painter.drawText(rect(), Qt::AlignCenter, tr("./v4l2-test client --ip <host>"));
+        }
         return;
     }
 
@@ -65,8 +73,14 @@ void MainWindow::onImageReceived(const Image &image)
 {
     m_imageReceived = true;
     cv::Mat cvImage = convert(image, m_showRawImage);
-    setImage(cvMatToQImage(cvImage));
+    m_imageConverted = !cvImage.empty();
+    if (m_imageConverted) {
+        setImage(cvMatToQImage(cvImage));
 
+    } else {
+        update();
+    }
+    
     if (!m_connected) {
         m_fpsSequence = image.sequence();
         m_fpsTimestamp = image.timestamp();
