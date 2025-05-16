@@ -1,13 +1,14 @@
 #pragma once
 
-#include "window.hpp"
+#include <QMainWindow>
 #include "socketserver.hpp"
+#include "imagewidget.hpp"
 
 namespace Ui {
     class MainWindow;
 }
 
-class MainWindow : public Window 
+class MainWindow : public QMainWindow 
 {
     Q_OBJECT
 
@@ -15,8 +16,8 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
-protected:
-    void paintEvent(QPaintEvent *event) override;
+    QImage image() const;
+    void setImage(const QImage &image);
 
 private slots:
     void onImageReceived(const Image &image);
@@ -37,7 +38,8 @@ private:
     int             m_fpsTimestamp;
     double          m_fps;
     bool            m_showRawImage;
-
+    ImageWidget*    m_imageWidget;
+    
     void setupStatusBar();
     void updateImageInfo(const Image &image);
     void updateConnectionStatus(bool connected);

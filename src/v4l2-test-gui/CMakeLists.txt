@@ -20,17 +20,17 @@ set(UI
 
 set(SOURCES
     main.cpp
-    window.cpp
     mainwindow.cpp
+    imagewidget.cpp
     convert.cpp
     socketserver.cpp
 )
 
 set(HEADERS
-    window.hpp
     mainwindow.hpp
     mainwindow.ui
     mainwindow.qrc
+    imagewidget.hpp
     convert.hpp
     socketserver.hpp
 )

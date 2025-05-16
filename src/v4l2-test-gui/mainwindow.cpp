@@ -5,7 +5,7 @@
 
 
 MainWindow::MainWindow(QWidget *parent) :
-    Window(parent),
+    QMainWindow(parent),
     ui(new Ui::MainWindow),
     m_server(this),
     m_connected(false),
@@ -23,9 +23,12 @@ MainWindow::MainWindow(QWidget *parent) :
     resize(800, 600);
     setupStatusBar();
 
+    m_imageWidget = new ImageWidget(this);
+    setCentralWidget(m_imageWidget);
+
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
-    connect(ui->actionFitToWindow, &QAction::triggered, this, &Window::fitImageToWindow);
+    connect(ui->actionFitToWidget, &QAction::triggered, m_imageWidget, &ImageWidget::fitImageToWidget);
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
@@ -38,25 +41,14 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::paintEvent(QPaintEvent *event) 
+QImage MainWindow::image() const 
 {
-    Q_UNUSED(event);
-    if (!m_imageReceived || !m_imageConverted) {
-        QPainter painter(this);
-        painter.setFont(QFont("Arial", 20));
+    return m_imageWidget->image();
+}
 
-        if (m_imageReceived && !m_imageConverted) {
-            painter.setPen(Qt::darkRed);
-            painter.drawText(rect(), Qt::AlignCenter, tr("Unable to convert Image."
-                "\nPixelformat not supported!"));
-        } else {
-            painter.setPen(Qt::darkGray);
-            painter.drawText(rect(), Qt::AlignCenter, tr("./v4l2-test client --ip <host>"));
-        }
-        return;
-    }
-
-    Window::paintEvent(event);
+void MainWindow::setImage(const QImage &image) 
+{
+    m_imageWidget->setImage(image);
 }
 
 QString pixelFormat(const Image &image)
@@ -76,7 +68,7 @@ void MainWindow::onImageReceived(const Image &image)
     m_imageConverted = !cvImage.empty();
     if (m_imageConverted) {
         setImage(cvMatToQImage(cvImage));
-
+        
     } else {
         update();
     }
@@ -93,6 +85,8 @@ void MainWindow::onImageReceived(const Image &image)
 
     updateImageInfo(image);
     updateConnectionStatus(true);
+    m_imageWidget->setImageReceived(m_imageReceived);
+    m_imageWidget->setImageConverted(m_imageConverted);
 }
 
 void MainWindow::onDisconnected()
