@@ -23,7 +23,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>24</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuView">
@@ -62,8 +62,11 @@
    </property>
   </action>
   <action name="actionFitToWidget">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Fit Image to Widget</string>
+    <string>Fit Image to Window</string>
    </property>
    <property name="shortcut">
     <string>F</string>

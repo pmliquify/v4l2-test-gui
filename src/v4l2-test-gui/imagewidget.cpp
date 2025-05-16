@@ -32,13 +32,6 @@ void ImageWidget::setImage(const QImage &image)
 
 void ImageWidget::fitImageToWidget() 
 {
-    m_autoFit = true;
-    if (m_image.isNull()) {
-        m_scaleFactor = 1.0;
-        m_imageOffset = QPoint(0, 0);
-        update();
-        return;
-    }
     double widthRatio = (double)width() / m_image.width();
     double heightRatio = (double)height() / m_image.height();
     m_scaleFactor = qMin(widthRatio, heightRatio);
@@ -46,6 +39,10 @@ void ImageWidget::fitImageToWidget()
     int offsetX = (width() - scaledSize.width()) / 2;
     int offsetY = (height() - scaledSize.height()) / 2;
     m_imageOffset = QPoint(offsetX, offsetY);
+
+    m_autoFit = true;
+    emit autoFitChanged(true);
+
     update();
 }
 
@@ -72,6 +69,11 @@ void ImageWidget::setImageConverted(bool converted)
 {
     m_imageConverted = converted;
     update();
+}
+
+bool ImageWidget::isAutoFit() const
+{ 
+        return m_autoFit; 
 }
 
 void ImageWidget::paintEvent(QPaintEvent *event) 
@@ -104,21 +106,26 @@ void ImageWidget::paintEvent(QPaintEvent *event)
 
 void ImageWidget::wheelEvent(QWheelEvent *event)
 {
-    m_autoFit = false;
     int delta = event->angleDelta().y();
     double factor = (delta > 0) ? 1.1 : 0.9;
     m_scaleFactor *= factor;
     QPoint mousePos = event->position().toPoint();
     m_imageOffset = (m_imageOffset - mousePos) * factor + mousePos;
+    
+    m_autoFit = false;
+    emit autoFitChanged(false);
+
     update();
 }
 
 void ImageWidget::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::RightButton) {
-        m_autoFit = false;
         m_dragging = true;
         m_lastMousePos = event->pos();
+        
+        m_autoFit = false;
+        emit autoFitChanged(false);
     }
     if (event->button() == Qt::LeftButton) {
         m_drawingRect = true;

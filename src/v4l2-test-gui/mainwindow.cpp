@@ -26,9 +26,12 @@ MainWindow::MainWindow(QWidget *parent) :
     m_imageWidget = new ImageWidget(this);
     setCentralWidget(m_imageWidget);
 
+    connect(ui->actionFitToWidget, &QAction::triggered, m_imageWidget, &ImageWidget::fitImageToWidget);
+    connect(m_imageWidget, &ImageWidget::autoFitChanged, ui->actionFitToWidget, &QAction::setChecked);
+    ui->actionFitToWidget->setChecked(m_imageWidget->isAutoFit());
+    
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
-    connect(ui->actionFitToWidget, &QAction::triggered, m_imageWidget, &ImageWidget::fitImageToWidget);
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);

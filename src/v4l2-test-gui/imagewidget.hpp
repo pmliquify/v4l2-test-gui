@@ -12,6 +12,10 @@ public:
     void setImage(const QImage &image);
     void setImageReceived(bool received);
     void setImageConverted(bool converted);
+    bool isAutoFit() const;
+
+signals:
+    void autoFitChanged(bool enabled);
 
 public slots:
     void fitImageToWidget();
