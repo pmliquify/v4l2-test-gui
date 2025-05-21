@@ -16,15 +16,18 @@ MainWindow::MainWindow(QWidget *parent) :
     m_fpsSequence(0),
     m_fpsTimestamp(0),
     m_fps(0.0),
-    m_showRawImage(false)
+    m_showRawImage(false),
+    m_lastDir(QDir::homePath())
 {
     ui->setupUi(this);
+    
     setWindowTitle(tr("v4l2-test-gui (%1)").arg(V4L2TEST_VERSION));
     resize(800, 600);
     setupStatusBar();
 
     m_imageWidget = new ImageWidget(this);
     setCentralWidget(m_imageWidget);
+    loadSettings();
 
     connect(ui->actionFitToWidget, &QAction::triggered, m_imageWidget, &ImageWidget::fitImageToWidget);
     connect(m_imageWidget, &ImageWidget::autoFitChanged, ui->actionFitToWidget, &QAction::setChecked);
@@ -35,13 +38,35 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
-    
+        
     updateConnectionStatus(false);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::loadSettings()
+{
+    QSettings settings("v4l2-test-gui", "v4l2-test-gui");
+    restoreGeometry(settings.value("geometry").toByteArray());
+    restoreState(settings.value("windowState").toByteArray());
+    m_lastDir = settings.value("lastDir", QDir::homePath()).toString();
+}
+
+void MainWindow::saveSettings()
+{
+    QSettings settings("v4l2-test-gui", "v4l2-test-gui");
+    settings.setValue("geometry", saveGeometry());
+    settings.setValue("windowState", saveState());
+    settings.setValue("lastDir", m_lastDir);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    saveSettings();
+    QMainWindow::closeEvent(event);
 }
 
 QImage MainWindow::image() const 
@@ -110,11 +135,13 @@ void MainWindow::saveImage()
     }
 
     QString fileName = QFileDialog::getSaveFileName(this, 
-        tr("Save Image"), QDir::homePath(), tr("Images (*.png *.jpg *.bmp)"));
+        tr("Save Image"), m_lastDir, tr("Images (*.png *.jpg *.bmp)"));
     if (fileName.isEmpty()) {
         return;
     }
 
+    QFileInfo fi(fileName);
+    m_lastDir = fi.absolutePath();
     image().save(fileName);
 }
 

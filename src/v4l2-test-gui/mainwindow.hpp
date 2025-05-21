@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QMainWindow>
+#include <QtWidgets>
 #include "socketserver.hpp"
 #include "imagewidget.hpp"
 
@@ -39,8 +39,14 @@ private:
     double          m_fps;
     bool            m_showRawImage;
     ImageWidget*    m_imageWidget;
+    QString         m_lastDir;
     
     void setupStatusBar();
+    void loadSettings();
+    void saveSettings();
     void updateImageInfo(const Image &image);
     void updateConnectionStatus(bool connected);
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 };
