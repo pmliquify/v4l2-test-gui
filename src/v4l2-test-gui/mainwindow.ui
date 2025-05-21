@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>v4l2-test-gui</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/icons/app.png</normaloff>:/icons/app.png</iconset>
+  </property>
   <property name="locale">
    <locale language="English" country="UnitedKingdom"/>
   </property>
@@ -23,7 +27,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>29</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuView">
@@ -45,8 +49,19 @@
     </property>
     <addaction name="actionAllwaysOnTop"/>
    </widget>
+   <widget class="QMenu" name="menuImage">
+    <property name="title">
+     <string>Image</string>
+    </property>
+    <addaction name="actionIncreaseStride"/>
+    <addaction name="actionDecreaseStride"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowRaw"/>
+    <addaction name="separator"/>
+    <addaction name="actionFitToWidget"/>
+   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuView"/>
+   <addaction name="menuImage"/>
    <addaction name="menuWindow"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -89,6 +104,33 @@
    </property>
    <property name="shortcut">
     <string>T</string>
+   </property>
+  </action>
+  <action name="actionIncreaseStride">
+   <property name="text">
+    <string>Increase Stride</string>
+   </property>
+   <property name="shortcut">
+    <string>+</string>
+   </property>
+  </action>
+  <action name="actionDecreaseStride">
+   <property name="text">
+    <string>Decrease Stride</string>
+   </property>
+   <property name="shortcut">
+    <string>-</string>
+   </property>
+  </action>
+  <action name="actionFitToHeight">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Fit to Height</string>
+   </property>
+   <property name="shortcut">
+    <string>H</string>
    </property>
   </action>
  </widget>

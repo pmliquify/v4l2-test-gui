@@ -4,5 +4,5 @@
 #include <opencv2/opencv.hpp>
 #include <QtGui>
 
-cv::Mat convert(const Image &image, bool raw);
+cv::Mat convert(const Image &image,  int strideOffset, bool raw);
 QImage cvMatToQImage(const cv::Mat &mat);

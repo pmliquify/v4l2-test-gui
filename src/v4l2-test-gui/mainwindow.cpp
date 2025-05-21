@@ -17,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_fpsTimestamp(0),
     m_fps(0.0),
     m_showRawImage(false),
+    m_strideOffset(0),
     m_lastDir(QDir::homePath())
 {
     ui->setupUi(this);
@@ -36,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
+    connect(ui->actionIncreaseStride, &QAction::triggered, this, &MainWindow::increaseStride);
+    connect(ui->actionDecreaseStride, &QAction::triggered, this, &MainWindow::decreaseStride);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
         
@@ -92,7 +95,7 @@ QString pixelFormat(const Image &image)
 void MainWindow::onImageReceived(const Image &image) 
 {
     m_imageReceived = true;
-    cv::Mat cvImage = convert(image, m_showRawImage);
+    cv::Mat cvImage = convert(image, m_strideOffset, m_showRawImage);
     m_imageConverted = !cvImage.empty();
     if (m_imageConverted) {
         setImage(cvMatToQImage(cvImage));
@@ -100,7 +103,9 @@ void MainWindow::onImageReceived(const Image &image)
     } else {
         update();
     }
-    
+    m_imageWidget->setImageReceived(m_imageReceived);
+    m_imageWidget->setImageConverted(m_imageConverted);
+
     if (!m_connected) {
         m_fpsSequence = image.sequence();
         m_fpsTimestamp = image.timestamp();
@@ -113,8 +118,6 @@ void MainWindow::onImageReceived(const Image &image)
 
     updateImageInfo(image);
     updateConnectionStatus(true);
-    m_imageWidget->setImageReceived(m_imageReceived);
-    m_imageWidget->setImageConverted(m_imageConverted);
 }
 
 void MainWindow::onDisconnected()
@@ -134,8 +137,11 @@ void MainWindow::saveImage()
         return;
     }
 
+    // TODO: Check if QFileDialog::DontUseNativeDialog is necessary
+    //       In develop branch it is not!
     QString fileName = QFileDialog::getSaveFileName(this, 
-        tr("Save Image"), m_lastDir, tr("Images (*.png *.jpg *.bmp)"));
+        tr("Save Image"), m_lastDir, tr("Images (*.png *.jpg *.bmp)"), nullptr,
+        QFileDialog::DontUseNativeDialog);
     if (fileName.isEmpty()) {
         return;
     }
@@ -152,6 +158,18 @@ void MainWindow::setAllwaysOnTop(bool checked)
         windowFlags() & ~Qt::WindowStaysOnTopHint;
     setWindowFlags(flags);
     show();
+}
+
+void MainWindow::increaseStride()
+{
+    m_strideOffset++;
+    update();
+}
+
+void MainWindow::decreaseStride()
+{
+    m_strideOffset--;
+    update();
 }
 
 void MainWindow::setupStatusBar()
@@ -175,7 +193,7 @@ void MainWindow::updateImageInfo(const Image &image)
 {
     setWindowTitle(tr("%1x%2, %3, line: %4 bytes, size: %5 bytes")
         .arg(image.width()).arg(image.height()).arg(pixelFormat(image))
-        .arg(image.bytesPerLine()).arg(image.imageSize()));
+        .arg(image.bytesPerLine() + m_strideOffset).arg(image.imageSize()));
     statusBar()->showMessage(tr("%1 fps - #%2 - ts: %3 ms")
         .arg(m_fps, 0, 'f', 1)
         .arg(image.sequence(), 5, 10, QChar('0')).arg(image.timestamp(), 8));

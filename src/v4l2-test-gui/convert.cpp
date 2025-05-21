@@ -48,7 +48,7 @@ void unpack12ToRAW8(cv::Mat &unpackedRAW8, const Image &image)
     }
 }
 
-cv::Mat convert(const Image &image, bool raw)
+cv::Mat convert(const Image &image, int strideOffset, bool raw)
 {
     bool packed10bit = false;
     bool packed12bit = false;
@@ -89,7 +89,7 @@ cv::Mat convert(const Image &image, bool raw)
         return cv::Mat();
     }
 
-    cv::Mat imageRAW8(image.height(), image.width(), type, cv::Scalar(200, 0, 0));
+    cv::Mat imageRAW8(image.height(), image.width() + strideOffset, type, cv::Scalar(200, 0, 0));
     if (packed10bit) {
         unpack10ToRAW8(imageRAW8, image);
 

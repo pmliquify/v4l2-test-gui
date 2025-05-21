@@ -1,4 +1,5 @@
 #include "imagewidget.hpp"
+#include <QtNetwork>
 
 
 ImageWidget::ImageWidget(QWidget *parent)
@@ -49,11 +50,8 @@ void ImageWidget::fitImageToWidget()
 void ImageWidget::resizeEvent(QResizeEvent *event)
 {
     if (m_autoFit) {
-        // fitImageToWidget setzt m_autoFit erneut, daher temporär deaktivieren
-        bool oldAutoFit = m_autoFit;
-        m_autoFit = false;
         fitImageToWidget();
-        m_autoFit = oldAutoFit;
+
     } else {
         QWidget::resizeEvent(event);
     }
@@ -87,7 +85,8 @@ void ImageWidget::paintEvent(QPaintEvent *event)
             painter.drawText(rect(), Qt::AlignCenter, tr("Unable to convert Image.\nPixelformat not supported!"));
         } else {
             painter.setPen(Qt::darkGray);
-            painter.drawText(rect(), Qt::AlignCenter, tr("./v4l2-test client --ip <host>"));
+            QString hostName = QHostInfo::localHostName();
+            painter.drawText(rect(), Qt::AlignCenter, tr("./v4l2-test client --ip %1").arg(hostName));
         }
         return;
     }

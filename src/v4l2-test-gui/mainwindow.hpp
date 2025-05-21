@@ -25,6 +25,8 @@ private slots:
     void setShowRawImage(bool checked);
     void saveImage();
     void setAllwaysOnTop(bool checked);
+    void increaseStride();
+    void decreaseStride();
 
 private:
     Ui::MainWindow* ui;
@@ -38,6 +40,7 @@ private:
     int             m_fpsTimestamp;
     double          m_fps;
     bool            m_showRawImage;
+    int             m_strideOffset;
     ImageWidget*    m_imageWidget;
     QString         m_lastDir;
     

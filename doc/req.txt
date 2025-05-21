@@ -1,0 +1,24 @@
+
+sudo apt update
+
+sudo apt install -y build-essential cmake
+
+#um sicher zu gehen, dass 4.5.4 installiert wird
+#sudo apt install -y libopencv-dev
+sudo apt install -y libopencv-dev=4.5.4+dfsg-9ubuntu4
+
+sudo apt install -y qt6-base-dev
+
+sudo apt install -y libglx-dev libgl1-mesa-dev
+
+
+#und oder beides...
+sudo apt install -y libxcb-xkb-dev
+sudo apt install -y libxkbcommon-dev libxkbfile-dev
+#...
+
+sudo apt-get install -y libvulkan-dev
+
+git clone https://github.com/pmliquify/v4l2-test-gui
+
+

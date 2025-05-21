@@ -16,6 +16,7 @@ find_package(OpenCV REQUIRED)
 
 set(UI
     mainwindow.ui
+    mainwindow.qrc
 )
 
 set(SOURCES
@@ -35,8 +36,17 @@ set(HEADERS
     socketserver.hpp
 )
 
-add_executable(${PROJECT_NAME} ${UI} ${SOURCES} ${HEADERS})
-message(${PROJECT_BINARY_DIR}/src)
+if (APPLE)
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${UI} ${SOURCES} ${HEADERS})    
+    target_sources(${PROJECT_NAME} PRIVATE icons/app.icns)
+    set_source_files_properties(icons/app.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources")
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        MACOSX_BUNDLE_ICON_FILE app.icns)
+else()
+    add_executable(${PROJECT_NAME} ${UI} ${SOURCES} ${HEADERS})
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_BINARY_DIR}/..)
 
 target_link_libraries(${PROJECT_NAME} 
