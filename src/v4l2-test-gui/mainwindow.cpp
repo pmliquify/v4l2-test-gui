@@ -1,7 +1,9 @@
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "convert.hpp"
+#include "roi.hpp"
 #include <version.h>
+#include <QtCore>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -18,7 +20,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_fps(0.0),
     m_showRawImage(false),
     m_strideOffset(0),
-    m_lastDir(QDir::homePath())
+    m_lastDir(QDir::homePath()),
+    m_currentProjectFile("")
 {
     ui->setupUi(this);
     
@@ -29,12 +32,17 @@ MainWindow::MainWindow(QWidget *parent) :
     m_imageWidget = new ImageWidget(this);
     setCentralWidget(m_imageWidget);
     loadSettings();
+    loadLastProject();
 
     connect(ui->actionFitToWidget, &QAction::triggered, m_imageWidget, &ImageWidget::fitImageToWidget);
     connect(m_imageWidget, &ImageWidget::autoFitChanged, ui->actionFitToWidget, &QAction::setChecked);
     ui->actionFitToWidget->setChecked(m_imageWidget->isAutoFit());
     
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
+    connect(ui->actionNewProject, &QAction::triggered, this, &MainWindow::newProject);
+    connect(ui->actionOpenProject, &QAction::triggered, this, &MainWindow::openProject);
+    connect(ui->actionSaveProject, &QAction::triggered, this, &MainWindow::saveProject);
+    connect(ui->actionSaveProjectAs, &QAction::triggered, this, &MainWindow::saveProjectAs);
     connect(ui->actionShowRaw, &QAction::toggled, this, &MainWindow::setShowRawImage);
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(ui->actionIncreaseStride, &QAction::triggered, this, &MainWindow::increaseStride);
@@ -64,6 +72,79 @@ void MainWindow::saveSettings()
     settings.setValue("geometry", saveGeometry());
     settings.setValue("windowState", saveState());
     settings.setValue("lastDir", m_lastDir);
+    settings.setValue("lastProject", m_currentProjectFile);
+}
+
+void MainWindow::loadLastProject()
+{
+    QSettings settings("v4l2-test-gui", "v4l2-test-gui");
+    QString lastProject = settings.value("lastProject", "").toString();
+    if (!lastProject.isEmpty() && QFile::exists(lastProject)) {
+        m_currentProjectFile = lastProject;
+        m_imageWidget->loadProject(lastProject);
+    }
+}
+
+void MainWindow::newProject()
+{
+    // Clear current project
+    m_currentProjectFile.clear();
+    
+    // Clear all ROIs (create new empty Roi list and load it)
+    QList<Roi> emptyRois;
+    QString tempFile = QDir::temp().filePath("empty_project.v4l2proj");
+    
+    // Create temporary empty project file
+    QJsonObject projectData;
+    projectData["version"] = "1.0";
+    projectData["rois"] = QJsonArray();
+    projectData["nextRoiId"] = 0;
+    
+    QJsonDocument doc(projectData);
+    QFile file(tempFile);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(doc.toJson());
+        file.close();
+        m_imageWidget->loadProject(tempFile);
+        QFile::remove(tempFile); // Clean up temporary file
+    }
+}
+
+void MainWindow::openProject()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+        tr("Open Project"), m_lastDir, tr("v4l2 Project Files (*.v4l2proj)"), nullptr,
+        QFileDialog::DontUseNativeDialog);
+    
+    if (!fileName.isEmpty()) {
+        QFileInfo fi(fileName);
+        m_lastDir = fi.absolutePath();
+        m_currentProjectFile = fileName;
+        m_imageWidget->loadProject(fileName);
+    }
+}
+
+void MainWindow::saveProject()
+{
+    if (m_currentProjectFile.isEmpty()) {
+        saveProjectAs();
+    } else {
+        m_imageWidget->saveProject(m_currentProjectFile);
+    }
+}
+
+void MainWindow::saveProjectAs()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,
+        tr("Save Project"), m_lastDir, tr("v4l2 Project Files (*.v4l2proj)"), nullptr,
+        QFileDialog::DontUseNativeDialog);
+    
+    if (!fileName.isEmpty()) {
+        QFileInfo fi(fileName);
+        m_lastDir = fi.absolutePath();
+        m_currentProjectFile = fileName;
+        m_imageWidget->saveProject(fileName);
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

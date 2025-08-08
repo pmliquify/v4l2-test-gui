@@ -11,6 +11,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS 
     Widgets 
     Network
+    Charts
 )
 find_package(OpenCV REQUIRED)
 
@@ -25,6 +26,10 @@ set(SOURCES
     imagewidget.cpp
     convert.cpp
     socketserver.cpp
+    roi.cpp
+    projectmanager.cpp
+    histogram.cpp
+    function.cpp
 )
 
 set(HEADERS
@@ -34,6 +39,10 @@ set(HEADERS
     imagewidget.hpp
     convert.hpp
     socketserver.hpp
+    roi.hpp
+    projectmanager.hpp
+    histogram.hpp
+    function.hpp
 )
 
 if (APPLE)
@@ -53,4 +62,5 @@ target_link_libraries(${PROJECT_NAME}
     common
     Qt6::Widgets 
     Qt6::Network
+    Qt6::Charts
     ${OpenCV_LIBS})

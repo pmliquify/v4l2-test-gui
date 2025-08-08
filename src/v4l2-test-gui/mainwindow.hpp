@@ -27,6 +27,10 @@ private slots:
     void setAllwaysOnTop(bool checked);
     void increaseStride();
     void decreaseStride();
+    void newProject();
+    void openProject();
+    void saveProject();
+    void saveProjectAs();
 
 private:
     Ui::MainWindow* ui;
@@ -43,12 +47,14 @@ private:
     int             m_strideOffset;
     ImageWidget*    m_imageWidget;
     QString         m_lastDir;
+    QString         m_currentProjectFile;
     
     void setupStatusBar();
     void loadSettings();
     void saveSettings();
     void updateImageInfo(const Image &image);
     void updateConnectionStatus(bool connected);
+    void loadLastProject();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
