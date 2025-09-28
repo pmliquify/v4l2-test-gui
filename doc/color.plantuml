@@ -1,0 +1,19 @@
+@startuml
+title NVIDIA ISP - Farbraum und Farbformat
+
+rectangle "RG10" as RG10
+rectangle "lineares RGB" as LINEARRGB
+rectangle "RGB (sRGB)" as RGB
+rectangle "NV12 (YUV 4:2:0)" as NV12
+rectangle "BGR (sRGB)" as BGR
+rectangle "lineares BGR" as LINEARBGR
+rectangle "LAB (CIE)" as LAB
+
+RG10 --> LINEARRGB : Debayering
+LINEARRGB --> RGB : Gamma-Korrektur
+RGB --> NV12 : BT.601
+NV12 --> BGR : Inverse BT.601
+BGR --> LINEARBGR : Gamma-Korrektur entfernen
+LINEARBGR --> LAB : CIE Umrechnung
+
+@enduml

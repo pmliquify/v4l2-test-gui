@@ -26,5 +26,13 @@ private slots:
 private:
     QTcpServer *    m_server;
     Image *         m_image;
-    bool            m_headerReceived;
+
+    enum State {
+        WAITING_FOR_HEADER,
+        WAITING_FOR_PLANE_SIZE,
+        WAITING_FOR_PLANE_DATA
+    };
+    State           m_state;
+    int             m_currentPlane;
+    unsigned int    m_planeSize;
 };

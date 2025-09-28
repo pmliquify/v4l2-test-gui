@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(V4L2-Test
-        VERSION 0.3.0
+        VERSION 0.4.0
         DESCRIPTION "V4L2 testing application"
         HOMEPAGE_URL "https://github.com/pmliquify/v4l2-test")
 configure_file (

@@ -46,3 +46,6 @@ typedef unsigned int __u32;
  
 /* Luminance+Chrominance formats */
 #define V4L2_PIX_FMT_YUYV     v4l2_fourcc('Y', 'U', 'Y', 'V') /* 16  YUV 4:2:2     */
+
+/* two planes -- one Y, one Cr + Cb interleaved  */
+#define V4L2_PIX_FMT_NV12    v4l2_fourcc('N', 'V', '1', '2') /* 12  Y/CbCr 4:2:0  */

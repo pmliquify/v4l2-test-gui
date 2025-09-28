@@ -2,7 +2,7 @@
 
 The goal of this application is to support the development of v4l2 camera drivers and to provide customers with a simple way to display images from a v4l2 camera. The application relies on images being sent via TCP/IP, making it easy to view images from a headless embedded system on a host PC.
 
-## Version 0.3.0
+## Version 0.4.0
 
 ## Build
 

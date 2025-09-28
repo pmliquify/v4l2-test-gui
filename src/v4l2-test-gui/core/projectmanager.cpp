@@ -1,21 +1,16 @@
 #include "projectmanager.hpp"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QFile>
-#include <QFileInfo>
-#include <QDir>
 
 ProjectManager::ProjectManager()
 {
 }
 
-bool ProjectManager::saveProject(const QString &filePath, const QList<Roi> &rois)
+bool ProjectManager::saveProject(const QString &filePath, const QList<Roi*> &rois, 
+                                bool autoFit, const QPoint &imageOffset, double scaleFactor)
 {
     m_lastError.clear();
     
     // Create project JSON
-    QJsonObject projectJson = createProjectJson(rois);
+    QJsonObject projectJson = createProjectJson(rois, autoFit, imageOffset, scaleFactor);
     
     // Create JSON document
     QJsonDocument doc(projectJson);
@@ -46,11 +41,16 @@ bool ProjectManager::saveProject(const QString &filePath, const QList<Roi> &rois
     return true;
 }
 
-bool ProjectManager::loadProject(const QString &filePath, QList<Roi> &rois, int &nextRoiId)
+bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int &nextRoiId,
+                                bool &autoFit, QPoint &imageOffset, double &scaleFactor)
 {
     m_lastError.clear();
+    qDeleteAll(rois);
     rois.clear();
     nextRoiId = 0;
+    autoFit = true;
+    imageOffset = QPoint(0, 0);
+    scaleFactor = 1.0;
     
     // Check if file exists
     if (!QFile::exists(filePath)) {
@@ -82,7 +82,7 @@ bool ProjectManager::loadProject(const QString &filePath, QList<Roi> &rois, int 
     }
     
     // Parse project data
-    return parseProjectJson(doc.object(), rois, nextRoiId);
+    return parseProjectJson(doc.object(), rois, nextRoiId, autoFit, imageOffset, scaleFactor);
 }
 
 QString ProjectManager::getProjectFileFilter() const
@@ -105,7 +105,8 @@ void ProjectManager::setError(const QString &error)
     m_lastError = error;
 }
 
-QJsonObject ProjectManager::createProjectJson(const QList<Roi> &rois) const
+QJsonObject ProjectManager::createProjectJson(const QList<Roi*> &rois, bool autoFit, 
+                                             const QPoint &imageOffset, double scaleFactor) const
 {
     QJsonObject projectJson;
     
@@ -114,23 +115,41 @@ QJsonObject ProjectManager::createProjectJson(const QList<Roi> &rois) const
     projectJson["application"] = "v4l2-test-gui";
     projectJson["created"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     
+    // Image view settings
+    QJsonObject viewSettings;
+    viewSettings["autoFit"] = autoFit;
+    viewSettings["imageOffsetX"] = imageOffset.x();
+    viewSettings["imageOffsetY"] = imageOffset.y();
+    viewSettings["scaleFactor"] = scaleFactor;
+    projectJson["viewSettings"] = viewSettings;
+    
     // ROI data
     QJsonArray roiArray;
-    for (const Roi &roi : rois) {
-        roiArray.append(roi.toJson());
+    for (const Roi *roi : rois) {
+        roiArray.append(roi->toJson());
     }
     projectJson["rois"] = roiArray;
     
     return projectJson;
 }
 
-bool ProjectManager::parseProjectJson(const QJsonObject &json, QList<Roi> &rois, int &nextRoiId)
+bool ProjectManager::parseProjectJson(const QJsonObject &json, QList<Roi*> &rois, int &nextRoiId,
+                                     bool &autoFit, QPoint &imageOffset, double &scaleFactor)
 {
     // Check version compatibility
     QString version = json["version"].toString();
     if (version != "1.0") {
         setError(QString("Unsupported project file version: %1").arg(version));
         return false;
+    }
+    
+    // Parse view settings (optional for backward compatibility)
+    if (json.contains("viewSettings")) {
+        QJsonObject viewSettings = json["viewSettings"].toObject();
+        autoFit = viewSettings["autoFit"].toBool(true);
+        imageOffset.setX(viewSettings["imageOffsetX"].toInt(0));
+        imageOffset.setY(viewSettings["imageOffsetY"].toInt(0));
+        scaleFactor = viewSettings["scaleFactor"].toDouble(1.0);
     }
     
     // Parse ROIs
@@ -147,15 +166,24 @@ bool ProjectManager::parseProjectJson(const QJsonObject &json, QList<Roi> &rois,
             return false;
         }
         
-        Roi roi;
-        roi.fromJson(value.toObject());
+        Roi *roi = new Roi();
+        roi->fromJson(value.toObject());
         rois.append(roi);
         
         // Update next ID counter
-        if (roi.id() >= nextRoiId) {
-            nextRoiId = roi.id() + 1;
+        if (roi->id() >= nextRoiId) {
+            nextRoiId = roi->id() + 1;
         }
     }
     
     return true;
+}
+
+// Backward compatibility overload
+bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int &nextRoiId)
+{
+    bool autoFit;
+    QPoint imageOffset;
+    double scaleFactor;
+    return loadProject(filePath, rois, nextRoiId, autoFit, imageOffset, scaleFactor);
 }

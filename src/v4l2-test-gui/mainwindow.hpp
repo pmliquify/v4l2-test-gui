@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtWidgets>
+#include <opencv2/opencv.hpp>
 #include "socketserver.hpp"
 #include "imagewidget.hpp"
 
@@ -16,9 +17,6 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
-    QImage image() const;
-    void setImage(const QImage &image);
-
 private slots:
     void onImageReceived(const Image &image);
     void onDisconnected();
@@ -31,6 +29,7 @@ private slots:
     void openProject();
     void saveProject();
     void saveProjectAs();
+    void openNewWindow();
 
 private:
     Ui::MainWindow* ui;
@@ -48,13 +47,15 @@ private:
     ImageWidget*    m_imageWidget;
     QString         m_lastDir;
     QString         m_currentProjectFile;
-    
+
     void setupStatusBar();
     void loadSettings();
     void saveSettings();
     void updateImageInfo(const Image &image);
     void updateConnectionStatus(bool connected);
     void loadLastProject();
+    void createFunctionDock(QWidget* functionWidget, const QString& title);
+    void removeFunctionDock(QWidget* functionWidget);
 
 protected:
     void closeEvent(QCloseEvent *event) override;

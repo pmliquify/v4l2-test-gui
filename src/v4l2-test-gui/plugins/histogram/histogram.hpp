@@ -1,35 +1,35 @@
 #pragma once
 
-#include <QtCore>
-#include <QtGui>
-#include <QVector>
 #include <memory>
 #include "function.hpp"
+
+class HistogramAdapter;
 
 class Histogram : public Function
 {
 public:
     Histogram();
     Histogram(const QPoint &position);
+    ~Histogram();
+
+    QString title() const override { return "Histogram"; }
+    PropertyAdapter* propertyAdapter() const override;
     
     // Function interface implementation
-    void calculate(const QImage &image, const QRect &roi) override;
-    void draw(QPainter &painter) const override;
+    void calculate(const cv::Mat &image, const cv::Rect &roi) override;
+    void draw(QPainter &painter, double scaleFactor, const QPoint &imageOffset) const override;
     bool containsPoint(const QPoint &point) const override;
     QJsonObject toJson() const override;
     void fromJson(const QJsonObject &json) override;
     std::unique_ptr<Function> clone() const override;
     
-    // Histogram-specific methods
-    QVector<int> redHistogram() const;
-    QVector<int> greenHistogram() const;
-    QVector<int> blueHistogram() const;
-    void setHistogramData(const QVector<int> &red, const QVector<int> &green, const QVector<int> &blue);
-    
     // Statistics
+    bool showRGBChannels() const;
+    void setShowRGBChannels(bool show);
     double getRedMean() const;
     double getGreenMean() const;
     double getBlueMean() const;
+    double getLuminanceMean() const;
     QString getMeanValueString() const;
     
     // Operators
@@ -37,9 +37,13 @@ public:
     bool operator!=(const Histogram &other) const;
 
 private:
-    QVector<int> m_redHist;      // Red channel histogram (256 values)
-    QVector<int> m_greenHist;    // Green channel histogram (256 values)
-    QVector<int> m_blueHist;     // Blue channel histogram (256 values)
+    HistogramAdapter* m_propertyAdapter;
+    
+    bool         m_showRGBChannels;
+    QVector<int> m_redHist;         // Red channel histogram (256 values)
+    QVector<int> m_greenHist;       // Green channel histogram (256 values)
+    QVector<int> m_blueHist;        // Blue channel histogram (256 values)
+    QVector<int> m_luminanceHist;   // Luminance histogram (256 values)
     
     // Constants
     static const int HISTOGRAM_WIDTH = 256;

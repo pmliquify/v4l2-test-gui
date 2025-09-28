@@ -2,8 +2,8 @@
 #include "ui_mainwindow.h"
 #include "convert.hpp"
 #include "roi.hpp"
+#include "propertybrowser.hpp"
 #include <version.h>
-#include <QtCore>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -31,6 +31,18 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_imageWidget = new ImageWidget(this);
     setCentralWidget(m_imageWidget);
+    
+    // Create property browser dock widget
+    PropertyBrowser *propertyBrowser = new PropertyBrowser(this);
+    QDockWidget *dock = new QDockWidget(tr("Properties"), this);
+    dock->setWidget(propertyBrowser);
+    dock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+    connect(m_imageWidget, &ImageWidget::roiSelectionChanged, propertyBrowser, &PropertyBrowser::onRoiSelectionChanged);
+    connect(propertyBrowser, &PropertyBrowser::propertyValueChanged, m_imageWidget, &ImageWidget::updateFunctions);
+    connect(m_imageWidget, &ImageWidget::functionWidgetCreated, this, &MainWindow::createFunctionDock);
+    connect(m_imageWidget, &ImageWidget::functionWidgetRemoved, this, &MainWindow::removeFunctionDock);
+
     loadSettings();
     loadLastProject();
 
@@ -38,6 +50,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_imageWidget, &ImageWidget::autoFitChanged, ui->actionFitToWidget, &QAction::setChecked);
     ui->actionFitToWidget->setChecked(m_imageWidget->isAutoFit());
     
+    connect(ui->actionNewWindow, &QAction::triggered, this, &MainWindow::openNewWindow);
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
     connect(ui->actionNewProject, &QAction::triggered, this, &MainWindow::newProject);
     connect(ui->actionOpenProject, &QAction::triggered, this, &MainWindow::openProject);
@@ -49,8 +62,35 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDecreaseStride, &QAction::triggered, this, &MainWindow::decreaseStride);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
-        
+
     updateConnectionStatus(false);
+}
+
+void MainWindow::openNewWindow()
+{
+#ifdef Q_OS_MAC
+    // Finde das .app-Bundle und öffne es mit 'open -n'
+    QString appPath = QCoreApplication::applicationFilePath();
+    QDir dir = QFileInfo(appPath).dir();
+    while (!dir.isRoot() && dir.dirName() != "MacOS") {
+        dir.cdUp();
+    }
+    if (dir.dirName() == "MacOS") {
+        dir.cdUp(); // Contents
+        dir.cdUp(); // .app-Bundle
+        QString bundlePath = dir.absolutePath();
+        QStringList args;
+        args << "-n" << bundlePath;
+        QProcess::startDetached("open", args);
+    } else {
+        // Fallback: wie bisher
+        QProcess::startDetached(appPath);
+    }
+#else
+    // Linux/Windows: Starte neue Instanz direkt
+    QString appPath = QCoreApplication::applicationFilePath();
+    QProcess::startDetached(appPath);
+#endif
 }
 
 MainWindow::~MainWindow()
@@ -153,16 +193,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     QMainWindow::closeEvent(event);
 }
 
-QImage MainWindow::image() const 
-{
-    return m_imageWidget->image();
-}
-
-void MainWindow::setImage(const QImage &image) 
-{
-    m_imageWidget->setImage(image);
-}
-
 QString pixelFormat(const Image &image)
 {
     QString format;
@@ -179,7 +209,7 @@ void MainWindow::onImageReceived(const Image &image)
     cv::Mat cvImage = convert(image, m_strideOffset, m_showRawImage);
     m_imageConverted = !cvImage.empty();
     if (m_imageConverted) {
-        setImage(cvMatToQImage(cvImage));
+        m_imageWidget->setImage(cvImage);
         
     } else {
         update();
@@ -214,7 +244,8 @@ void MainWindow::setShowRawImage(bool checked)
 
 void MainWindow::saveImage()
 {
-    if (image().isNull()) {
+    QImage image = m_imageWidget->qImage();
+    if (image.isNull()) {
         return;
     }
 
@@ -229,7 +260,7 @@ void MainWindow::saveImage()
 
     QFileInfo fi(fileName);
     m_lastDir = fi.absolutePath();
-    image().save(fileName);
+    image.save(fileName);
 }
 
 void MainWindow::setAllwaysOnTop(bool checked)
@@ -274,7 +305,7 @@ void MainWindow::updateImageInfo(const Image &image)
 {
     setWindowTitle(tr("%1x%2, %3, line: %4 bytes, size: %5 bytes")
         .arg(image.width()).arg(image.height()).arg(pixelFormat(image))
-        .arg(image.bytesPerLine() + m_strideOffset).arg(image.imageSize()));
+        .arg(image.bytesPerLine() + m_strideOffset).arg(image.size()));
     statusBar()->showMessage(tr("%1 fps - #%2 - ts: %3 ms")
         .arg(m_fps, 0, 'f', 1)
         .arg(image.sequence(), 5, 10, QChar('0')).arg(image.timestamp(), 8));
@@ -286,4 +317,57 @@ void MainWindow::updateConnectionStatus(bool connected)
     m_connectionStatus->setText(connected ? tr("Connected") : tr("Disconnected"));
     m_connectionStatus->setPixmap(
         QPixmap(connected ? ":/icons/connected.png" : ":/icons/disconnected.png"));
+}
+
+void MainWindow::createFunctionDock(QWidget* functionWidget, const QString& title)
+{
+    if (qobject_cast<QDockWidget*>(functionWidget->parentWidget())) {
+        return; // Widget already has a dock
+    }
+    
+    // Create dock widget for the function widget
+    QDockWidget *dockWidget = new QDockWidget(title, this);
+    dockWidget->setWidget(functionWidget);
+    dockWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    dockWidget->setMinimumHeight(50);
+    
+    // Position it in the right dock area, below the property browser
+    addDockWidget(Qt::RightDockWidgetArea, dockWidget);
+    
+    // Calculate half height of the available area for the right dock
+    QList<QDockWidget*> rightDocks;
+    for (QObject* obj : children()) {
+        QDockWidget* dock = qobject_cast<QDockWidget*>(obj);
+        if (dock && dockWidgetArea(dock) == Qt::RightDockWidgetArea) {
+            rightDocks.append(dock);
+        }
+    }
+    
+    // Get the available height for the dock area
+    int availableHeight = height() - statusBar()->height() - menuBar()->height();
+    
+    // Set the preferred height to half of the available height, distributed among docks
+    if (!rightDocks.isEmpty()) {
+        int preferredHeight = availableHeight / 2;
+        
+        // Resize the dock proportionally
+        QList<int> sizes;
+        for (QDockWidget* dock : rightDocks) {
+            sizes.append(preferredHeight / rightDocks.size());
+        }
+        resizeDocks(rightDocks, sizes, Qt::Vertical);
+    }
+}
+
+void MainWindow::removeFunctionDock(QWidget* functionWidget)
+{
+    Q_ASSERT(functionWidget);
+
+    QDockWidget* dockWidget = qobject_cast<QDockWidget*>(functionWidget->parentWidget());
+    if (dockWidget) {
+        // Remove widget from dock before deleting dock
+        dockWidget->setWidget(nullptr);
+        removeDockWidget(dockWidget);
+        dockWidget->deleteLater();
+    }
 }

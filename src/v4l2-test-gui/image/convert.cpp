@@ -4,7 +4,7 @@
 
 void unpack10ToRAW8(cv::Mat &unpackedRAW8, const Image &image)
 {
-    const uint8_t *packedData = (uint8_t *)image.planes()[0];
+    const uint8_t *packedData = (uint8_t *)image.plane(0).data();
     uint8_t *unpackedData = (uint8_t *)unpackedRAW8.data;
     
     for (int y = 0; y < image.height(); y++) {
@@ -27,7 +27,7 @@ void unpack10ToRAW8(cv::Mat &unpackedRAW8, const Image &image)
 
 void unpack12ToRAW8(cv::Mat &unpackedRAW8, const Image &image)
 {
-    const uint8_t *packedData = (uint8_t *)image.planes()[0];
+    const uint8_t *packedData = (uint8_t *)image.plane(0).data();
     uint8_t *unpackedData = (uint8_t *)unpackedRAW8.data;
     
     for (int y = 0; y < image.height(); y++) {
@@ -45,6 +45,101 @@ void unpack12ToRAW8(cv::Mat &unpackedRAW8, const Image &image)
             packedX += 3;
             unpackedX += 2;
         }              
+    }
+}
+
+void cvtColorYUV2BGR_NV12_BT601(const cv::Mat& imageY, const cv::Mat& imageUV, cv::Mat &imageBGR) 
+{
+    // qDebug() << "Using OpenCV NV12 BT.601 conversion";
+
+    cv::cvtColorTwoPlane(imageY, imageUV, imageBGR, cv::COLOR_YUV2BGR_NV12);
+}
+
+void cvtColorYUV2BGR_NV12_BT601_Custom(const cv::Mat& imageY, const cv::Mat& imageUV, cv::Mat &imageBGR) 
+{
+    qDebug() << "Using custom NV12 BT.601 conversion";
+
+    int height = imageY.rows;
+    int width = imageY.cols;
+
+    // Erstellen der BGR-Ausgabematrix
+    imageBGR.create(height, width, CV_8UC3);
+
+    // Iteration über jeden Pixel des Y-Kanals
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // Lesen der Y-Werte
+            uchar Y_val = imageY.at<uchar>(y, x);
+
+            // Lesen der U- und V-Werte aus der UV-Ebene
+            // Die UV-Ebene ist halbiert und interleaved (U, V, U, V...)
+            // Die UV-Koordinaten müssen den Y-Koordinaten entsprechen
+            int uv_row = y / 2;
+            int uv_col_pair = x / 2;
+            
+            // Die UV-Ebene enthält verschachtelte Werte: U V U V ...
+            uchar U_val = imageUV.at<cv::Vec2b>(uv_row, uv_col_pair)[0];
+            uchar V_val = imageUV.at<cv::Vec2b>(uv_row, uv_col_pair)[1];
+
+            // Anwenden der BT.601-Formeln (mit limited range offset)
+            float C = static_cast<float>(Y_val) - 16.0f;
+            float D = static_cast<float>(U_val) - 128.0f;
+            float E = static_cast<float>(V_val) - 128.0f;
+
+            // BT.601-Konvertierungsmatrix
+            float R = 1.164f * C + 1.596f * E;
+            float G = 1.164f * C - 0.392f * D - 0.813f * E;
+            float B = 1.164f * C + 2.017f * D;
+
+            // Sicherstellen, dass die Werte im gültigen Bereich 0-255 liegen
+            imageBGR.at<cv::Vec3b>(y, x)[0] = cv::saturate_cast<uchar>(B);
+            imageBGR.at<cv::Vec3b>(y, x)[1] = cv::saturate_cast<uchar>(G);
+            imageBGR.at<cv::Vec3b>(y, x)[2] = cv::saturate_cast<uchar>(R);
+        }
+    }
+}
+
+void cvtColorYUV2BGR_NV12_BT709_Custom(const cv::Mat& imageY, const cv::Mat& imageUV, cv::Mat &imageBGR) 
+{
+    qDebug() << "Using custom NV12 BT.709 conversion";
+
+    int height = imageY.rows;
+    int width = imageY.cols;
+
+    // Erstellen der BGR-Ausgabematrix
+    imageBGR.create(height, width, CV_8UC3);
+
+    // Iteration über jeden Pixel des Y-Kanals
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // Lesen der Y-Werte
+            uchar Y_val = imageY.at<uchar>(y, x);
+
+            // Lesen der U- und V-Werte aus der UV-Ebene
+            // Die UV-Ebene ist halbiert und interleaved (U, V, U, V...)
+            // Die UV-Koordinaten müssen den Y-Koordinaten entsprechen
+            int uv_row = y / 2;
+            int uv_col = x / 2;
+
+            uchar U_val = imageUV.at<cv::Vec2b>(uv_row, uv_col)[0];
+            uchar V_val = imageUV.at<cv::Vec2b>(uv_row, uv_col)[1];
+
+            // Anwenden der BT.709-Formeln
+            // Offset für U/V wird subtrahiert (128)
+            float Y_norm = static_cast<float>(Y_val);
+            float U_norm = static_cast<float>(U_val) - 128.0f;
+            float V_norm = static_cast<float>(V_val) - 128.0f;
+
+            // BT.709-Konvertierungsmatrix
+            float R = Y_norm + 1.5748f * V_norm;
+            float G = Y_norm - 0.1873f * U_norm - 0.4681f * V_norm;
+            float B = Y_norm + 1.8556f * U_norm;
+
+            // Sicherstellen, dass die Werte im gültigen Bereich 0-255 liegen
+            imageBGR.at<cv::Vec3b>(y, x)[0] = cv::saturate_cast<uchar>(B);
+            imageBGR.at<cv::Vec3b>(y, x)[1] = cv::saturate_cast<uchar>(G);
+            imageBGR.at<cv::Vec3b>(y, x)[2] = cv::saturate_cast<uchar>(R);
+        }
     }
 }
 
@@ -84,9 +179,20 @@ cv::Mat convert(const Image &image, int strideOffset, bool raw)
     case V4L2_PIX_FMT_SGRBG12P: type =  CV_8UC1; debayer = true;  code =  cv::COLOR_BayerGR2RGB; packed12bit = true; break;
     case V4L2_PIX_FMT_SBGGR12P: type =  CV_8UC1; debayer = true;  code =  cv::COLOR_BayerBG2RGB; packed12bit = true; break;
     case V4L2_PIX_FMT_YUYV:     type =  CV_8UC2; debayer = true;  divider =    1; code = cv::COLOR_YUV2BGR_YUY2; break;
+    case V4L2_PIX_FMT_NV12:     break;
     default: 
         qDebug() << "Unsupported pixel format!";
         return cv::Mat();
+    }
+
+    if (image.pixelformat() == V4L2_PIX_FMT_NV12) {
+        cv::Mat imageY (image.height(),   image.width(), CV_8UC1, (char *)image.plane(0).data());
+        cv::Mat imageUV(image.height()/2, image.width()/2, CV_8UC2, (char *)image.plane(1).data());
+        cv::Mat imageBGR;
+        cvtColorYUV2BGR_NV12_BT601(imageY, imageUV, imageBGR);
+        // cvtColorYUV2BGR_NV12_BT601_Custom(imageY, imageUV, imageBGR);
+        // cvtColorYUV2BGR_NV12_BT709_Custom(imageY, imageUV, imageBGR);
+        return imageBGR;
     }
 
     cv::Mat imageRAW8(image.height(), image.width() + strideOffset, type, cv::Scalar(200, 0, 0));
@@ -98,11 +204,11 @@ cv::Mat convert(const Image &image, int strideOffset, bool raw)
 
     } else {
         int imageSize = image.bytesPerLine() * image.height();
-        if (image.imageSize() < imageSize) {
-                imageSize = image.imageSize();
+        if (image.size() < imageSize) {
+                imageSize = image.size();
         }
-        memcpy(imageRAW8.data, (char *)image.planes()[0], imageSize);
-    
+        memcpy(imageRAW8.data, (char *)image.plane(0).data(), imageSize);
+
         if (divider > 1) {
                 imageRAW8.convertTo(imageRAW8, CV_8UC1, 255.0/divider/(1 << image.shift()));
         }
@@ -119,21 +225,4 @@ cv::Mat convert(const Image &image, int strideOffset, bool raw)
     }
 
     return imageResult;
-}
-
-
-QImage cvMatToQImage(const cv::Mat &mat) 
-{
-    if(mat.type() == CV_8UC3) {
-        // OpenCV manages colors as BGR, QImage expects RGB
-        QImage image(mat.data, mat.cols, mat.rows, static_cast<int>(mat.step), QImage::Format_RGB888);
-        return image.rgbSwapped();
-
-    } else if(mat.type() == CV_8UC1) {
-        return QImage(mat.data, mat.cols, mat.rows, static_cast<int>(mat.step), QImage::Format_Grayscale8);
-    
-    } else {
-        qDebug() << "Unsupported cv::Mat format!";
-        return QImage();
-    }
 }

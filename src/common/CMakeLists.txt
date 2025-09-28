@@ -1,9 +1,11 @@
 
 set(SOURCES
+        plane.cpp
         image.cpp
 )
 
 set(HEADERS
+        plane.hpp        
         image.hpp
         sockettypes.hpp
 )

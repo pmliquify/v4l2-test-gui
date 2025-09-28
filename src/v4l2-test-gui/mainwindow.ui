@@ -14,7 +14,7 @@
    <string>v4l2-test-gui</string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="mainwindow.qrc">
     <normaloff>:/icons/app.png</normaloff>:/icons/app.png</iconset>
   </property>
   <property name="locale">
@@ -27,20 +27,15 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>24</height>
+     <height>29</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>View</string>
-    </property>
-    <addaction name="actionShowRaw"/>
-    <addaction name="actionFitToWidget"/>
-   </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionNewWindow"/>
+    <addaction name="separator"/>
     <addaction name="actionNewProject"/>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
@@ -97,7 +92,7 @@
     <string>Save Image ...</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Meta+S</string>
+    <string>Meta+Ctrl+S</string>
    </property>
   </action>
   <action name="actionAllwaysOnTop">
@@ -168,6 +163,14 @@
    </property>
    <property name="shortcut">
     <string>H</string>
+   </property>
+  </action>
+  <action name="actionNewWindow">
+   <property name="text">
+    <string>New Window</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+N</string>
    </property>
   </action>
  </widget>
