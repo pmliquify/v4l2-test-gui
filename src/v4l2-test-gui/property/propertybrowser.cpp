@@ -215,8 +215,13 @@ public:
             case QMetaType::Bool: {
                 QCheckBox* checkBox = new QCheckBox(parent);
                 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
                 connect(checkBox, &QCheckBox::checkStateChanged, 
                         m_browser, &PropertyBrowser::onEditorValueChanged);
+#else
+                connect(checkBox, &QCheckBox::stateChanged, 
+                        m_browser, &PropertyBrowser::onEditorValueChanged);
+#endif
                 
                 return checkBox;
             }
