@@ -392,7 +392,7 @@ PropertyBrowser::PropertyBrowser(QWidget *parent)
     m_treeWidget->setColumnCount(2);
     m_treeWidget->setAlternatingRowColors(true);
     m_treeWidget->setIndentation(20);
-    m_treeWidget->setColumnWidth(0, 150);
+    m_treeWidget->setColumnWidth(0, 180);
     
     // Enable editing with key press
     m_treeWidget->setEditTriggers(QAbstractItemView::AnyKeyPressed |
