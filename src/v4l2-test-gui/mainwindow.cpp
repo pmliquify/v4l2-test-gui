@@ -35,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // Create property browser dock widget
     PropertyBrowser *propertyBrowser = new PropertyBrowser(this);
     QDockWidget *dock = new QDockWidget(tr("Properties"), this);
+    dock->setObjectName("PropertiesDock");
     dock->setWidget(propertyBrowser);
     dock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     addDockWidget(Qt::RightDockWidgetArea, dock);
@@ -327,6 +328,7 @@ void MainWindow::createFunctionDock(QWidget* functionWidget, const QString& titl
     
     // Create dock widget for the function widget
     QDockWidget *dockWidget = new QDockWidget(title, this);
+    dockWidget->setObjectName(title + "Dock");
     dockWidget->setWidget(functionWidget);
     dockWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     dockWidget->setMinimumHeight(50);
