@@ -14,15 +14,23 @@ public:
     cv::Mat cvImage() const;
     QImage qImage() const;
     void setImage(const cv::Mat &image);
+    void setImage(const cv::Mat &image, unsigned int sequence, unsigned long timestamp);
     void setImageReceived(bool received);
     void setImageConverted(bool converted);
     bool isAutoFit() const;
+    int maxImageCount() const;
+    int currentImageIndex() const;
+    int imageBufferSize() const;
+    unsigned int currentSequence() const;
+    unsigned long currentTimestamp() const;
 
 signals:
     void autoFitChanged(bool enabled);
     void roiSelectionChanged(Roi *roi);
     void functionWidgetCreated(QWidget* widget, const QString& title);
     void functionWidgetRemoved(QWidget* widget);
+    void imageCountChanged(int current, int max);
+    void currentImageIndexChanged(int index, unsigned int sequence, unsigned long timestamp);
 
 public slots:
     void fitImageToWidget();
@@ -30,6 +38,8 @@ public slots:
     void loadProject(const QString &filePath);
     void setImagePosition(const QPoint &offset, double scaleFactor);
     void updateFunctions();
+    void setMaxImageCount(int count);
+    void selectImage(int index);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -44,6 +54,13 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
 
 private:
+    // Image buffer structure for ring buffer
+    struct ImageBufferEntry {
+        cv::Mat image;
+        unsigned int sequence;
+        unsigned long timestamp;
+    };
+    
     cv::Mat         m_image;          // OpenCV image for efficient processing
     mutable QImage  m_qImage;         // Cached QImage for display (created on demand)
     mutable bool    m_qImageValid;    // Whether the cached QImage is up to date
@@ -76,6 +93,11 @@ private:
     bool            m_backgroundDirty;    // Flag to indicate if background needs redraw
     bool            m_overlaysVisible;    // Flag to control visibility of ROI and function overlays
     int             m_selectedRoiIndex;   // Index of currently selected ROI (-1 if none)
+    
+    // Ring buffer for images
+    QList<ImageBufferEntry> m_imageBuffer;  // Ring buffer for images
+    int             m_maxImageCount;        // Maximum number of images to keep in buffer
+    int             m_currentImageIndex;    // Index of currently displayed image (-1 if none)
     
     // Resize handle constants
     enum ResizeHandle {

@@ -20,8 +20,11 @@ MainWindow::MainWindow(QWidget *parent) :
     m_fps(0.0),
     m_showRawImage(false),
     m_strideOffset(0),
+    m_imageWidget(nullptr),
     m_lastDir(QDir::homePath()),
-    m_currentProjectFile("")
+    m_currentProjectFile(""),
+    m_imageSlider(nullptr),
+    m_imageCountSpinBox(nullptr)
 {
     ui->setupUi(this);
     
@@ -31,6 +34,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_imageWidget = new ImageWidget(this);
     setCentralWidget(m_imageWidget);
+    
+    // Setup navigation bar AFTER imageWidget is created
+    setupImageNavigationBar();
     
     // Create property browser dock widget
     PropertyBrowser *propertyBrowser = new PropertyBrowser(this);
@@ -43,6 +49,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(propertyBrowser, &PropertyBrowser::propertyValueChanged, m_imageWidget, &ImageWidget::updateFunctions);
     connect(m_imageWidget, &ImageWidget::functionWidgetCreated, this, &MainWindow::createFunctionDock);
     connect(m_imageWidget, &ImageWidget::functionWidgetRemoved, this, &MainWindow::removeFunctionDock);
+    connect(m_imageWidget, &ImageWidget::imageCountChanged, this, &MainWindow::updateImageNavigationUI);
+    connect(m_imageWidget, &ImageWidget::currentImageIndexChanged, this, &MainWindow::updateStatusBarImageInfo);
 
     loadSettings();
     loadLastProject();
@@ -210,7 +218,7 @@ void MainWindow::onImageReceived(const Image &image)
     cv::Mat cvImage = convert(image, m_strideOffset, m_showRawImage);
     m_imageConverted = !cvImage.empty();
     if (m_imageConverted) {
-        m_imageWidget->setImage(cvImage);
+        m_imageWidget->setImage(cvImage, image.sequence(), image.timestamp());
         
     } else {
         update();
@@ -372,4 +380,67 @@ void MainWindow::removeFunctionDock(QWidget* functionWidget)
         removeDockWidget(dockWidget);
         dockWidget->deleteLater();
     }
+}
+
+void MainWindow::setupImageNavigationBar()
+{
+    // Create a widget to hold the navigation controls
+    QWidget *navWidget = new QWidget(this);
+    QHBoxLayout *navLayout = new QHBoxLayout(navWidget);
+    navLayout->setContentsMargins(5, 5, 5, 5);
+    
+    // Create spinbox for max image count (without label)
+    m_imageCountSpinBox = new QSpinBox(navWidget);
+    m_imageCountSpinBox->setRange(1, 100);
+    m_imageCountSpinBox->setValue(10);
+    m_imageCountSpinBox->setToolTip(tr("Maximale Anzahl der Bilder im Puffer"));
+    navLayout->addWidget(m_imageCountSpinBox);
+    
+    // Create slider for image navigation
+    m_imageSlider = new QSlider(Qt::Horizontal, navWidget);
+    m_imageSlider->setRange(0, 0);
+    m_imageSlider->setValue(0);
+    m_imageSlider->setEnabled(false);
+    m_imageSlider->setToolTip(tr("Bild auswählen"));
+    navLayout->addWidget(m_imageSlider, 1);  // Give slider more space
+    
+    // Add navigation bar to bottom of main window
+    QDockWidget *navDock = new QDockWidget(this);
+    navDock->setObjectName("ImageNavigationDock");
+    navDock->setWidget(navWidget);
+    navDock->setFeatures(QDockWidget::NoDockWidgetFeatures);  // Fixed, non-closable
+    navDock->setTitleBarWidget(new QWidget()); // Hide title bar
+    addDockWidget(Qt::BottomDockWidgetArea, navDock);
+    
+    // Connect signals
+    connect(m_imageCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            m_imageWidget, &ImageWidget::setMaxImageCount);
+    connect(m_imageSlider, &QSlider::valueChanged,
+            m_imageWidget, &ImageWidget::selectImage);
+}
+
+void MainWindow::updateImageNavigationUI(int current, int max)
+{
+    // Block signals while updating to prevent recursive calls
+    m_imageSlider->blockSignals(true);
+    
+    // Update slider range and enable/disable based on available images
+    m_imageSlider->setRange(0, current > 0 ? current - 1 : 0);
+    m_imageSlider->setEnabled(current > 0);
+    
+    // Update slider value to point to latest image if not manually changed
+    if (current > 0) {
+        m_imageSlider->setValue(current - 1);
+    }
+    
+    m_imageSlider->blockSignals(false);
+}
+
+void MainWindow::updateStatusBarImageInfo(int index, unsigned int sequence, unsigned long timestamp)
+{
+    // Update status bar with current image info
+    statusBar()->showMessage(tr("%1 fps - #%2 - ts: %3 ms")
+        .arg(m_fps, 0, 'f', 1)
+        .arg(sequence, 5, 10, QChar('0'))
+        .arg(timestamp, 8));
 }

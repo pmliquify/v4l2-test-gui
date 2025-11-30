@@ -30,6 +30,8 @@ private slots:
     void saveProject();
     void saveProjectAs();
     void openNewWindow();
+    void updateImageNavigationUI(int current, int max);
+    void updateStatusBarImageInfo(int index, unsigned int sequence, unsigned long timestamp);
 
 private:
     Ui::MainWindow* ui;
@@ -47,6 +49,8 @@ private:
     ImageWidget*    m_imageWidget;
     QString         m_lastDir;
     QString         m_currentProjectFile;
+    QSlider*        m_imageSlider;
+    QSpinBox*       m_imageCountSpinBox;
 
     void setupStatusBar();
     void loadSettings();
@@ -56,6 +60,7 @@ private:
     void loadLastProject();
     void createFunctionDock(QWidget* functionWidget, const QString& title);
     void removeFunctionDock(QWidget* functionWidget);
+    void setupImageNavigationBar();
 
 protected:
     void closeEvent(QCloseEvent *event) override;

@@ -28,7 +28,9 @@ ImageWidget::ImageWidget(QWidget *parent)
       m_updatePending(false),
       m_backgroundDirty(true),
       m_overlaysVisible(true),
-      m_selectedRoiIndex(-1)
+      m_selectedRoiIndex(-1),
+      m_maxImageCount(10),
+      m_currentImageIndex(-1)
 {
     m_lastFunctionUpdate.start();
     m_lastPaintUpdate.start();
@@ -67,13 +69,44 @@ QImage ImageWidget::qImage() const
 
 void ImageWidget::setImage(const cv::Mat& image) 
 {
+    // Use setImage with default values for sequence and timestamp
+    setImage(image, 0, 0);
+}
+
+void ImageWidget::setImage(const cv::Mat& image, unsigned int sequence, unsigned long timestamp)
+{
     QSize oldSize = m_image.empty() ? QSize() : QSize(m_image.cols, m_image.rows);
     bool fitToWindow = oldSize != QSize(image.cols, image.rows);
     bool wasFirstImage = m_image.empty();
     
+    // Add image to ring buffer
+    ImageBufferEntry entry;
+    entry.image = image.clone();
+    entry.sequence = sequence;
+    entry.timestamp = timestamp;
+    
+    m_imageBuffer.append(entry);
+    
+    // Remove oldest image if buffer exceeds max count
+    while (m_imageBuffer.size() > m_maxImageCount) {
+        m_imageBuffer.removeFirst();
+        // Adjust current index if we're viewing an image that was removed
+        if (m_currentImageIndex > 0) {
+            m_currentImageIndex--;
+        }
+    }
+    
+    // Always select the newest image (last in buffer) when a new image arrives
+    m_currentImageIndex = m_imageBuffer.size() - 1;
+    
+    // Update current display image to the newest one
     m_image = image.clone();
     m_qImageValid = false; // Invalidate cached QImage
     m_backgroundDirty = true; // Mark background as dirty when image changes
+    
+    // Emit signals
+    emit imageCountChanged(m_imageBuffer.size(), m_maxImageCount);
+    emit currentImageIndexChanged(m_currentImageIndex, sequence, timestamp);
     
     if (fitToWindow) {
         fitImageToWidget();
@@ -644,7 +677,7 @@ void ImageWidget::validateFunctionPositions()
 
 void ImageWidget::saveProject(const QString &filePath)
 {
-    if (!m_projectManager.saveProject(filePath, m_rois, m_autoFit, m_imageOffset, m_scaleFactor)) {
+    if (!m_projectManager.saveProject(filePath, m_rois, m_autoFit, m_imageOffset, m_scaleFactor, m_maxImageCount)) {
         // Handle error - could emit a signal or show a message
         qWarning() << "Failed to save project to" << filePath;
     }
@@ -657,8 +690,9 @@ void ImageWidget::loadProject(const QString &filePath)
     bool autoFit;
     QPoint imageOffset;
     double scaleFactor;
+    int maxImageCount;
     
-    if (m_projectManager.loadProject(filePath, loadedRois, nextRoiId, autoFit, imageOffset, scaleFactor)) {
+    if (m_projectManager.loadProject(filePath, loadedRois, nextRoiId, autoFit, imageOffset, scaleFactor, maxImageCount)) {
         m_rois = loadedRois;
         m_nextRoiId = nextRoiId;
         
@@ -666,6 +700,9 @@ void ImageWidget::loadProject(const QString &filePath)
         setImagePosition(imageOffset, scaleFactor);
         m_autoFit = autoFit;
         emit autoFitChanged(autoFit);
+        
+        // Apply loaded max image count
+        setMaxImageCount(maxImageCount);
         
         // Only validate function positions if an image has been received
         // This prevents setting wrong positions when widget size is not yet stable
@@ -1015,4 +1052,89 @@ void ImageWidget::updateFunctions()
     
     // Trigger visual update
     update();
+}
+
+void ImageWidget::setMaxImageCount(int count)
+{
+    if (count < 1) {
+        count = 1;
+    }
+    
+    m_maxImageCount = count;
+    
+    // Remove excess images if new max is smaller
+    while (m_imageBuffer.size() > m_maxImageCount) {
+        m_imageBuffer.removeFirst();
+        
+        // Adjust current index if needed
+        if (m_currentImageIndex >= m_imageBuffer.size()) {
+            m_currentImageIndex = m_imageBuffer.size() - 1;
+        }
+    }
+    
+    // Update current image from buffer if we have a valid selection
+    if (m_currentImageIndex >= 0 && m_currentImageIndex < m_imageBuffer.size()) {
+        const ImageBufferEntry &entry = m_imageBuffer[m_currentImageIndex];
+        m_image = entry.image.clone();
+        m_qImageValid = false;
+        m_backgroundDirty = true;
+        updateFunctions();
+        update();
+        emit currentImageIndexChanged(m_currentImageIndex, entry.sequence, entry.timestamp);
+    }
+    
+    emit imageCountChanged(m_imageBuffer.size(), m_maxImageCount);
+}
+
+void ImageWidget::selectImage(int index)
+{
+    if (index < 0 || index >= m_imageBuffer.size()) {
+        return;
+    }
+    
+    m_currentImageIndex = index;
+    
+    const ImageBufferEntry &entry = m_imageBuffer[index];
+    m_image = entry.image.clone();
+    m_qImageValid = false;
+    m_backgroundDirty = true;
+    
+    // Recalculate all functions with the selected image
+    updateFunctions();
+    
+    // Trigger visual update
+    update();
+    
+    emit currentImageIndexChanged(index, entry.sequence, entry.timestamp);
+}
+
+int ImageWidget::maxImageCount() const
+{
+    return m_maxImageCount;
+}
+
+int ImageWidget::currentImageIndex() const
+{
+    return m_currentImageIndex;
+}
+
+int ImageWidget::imageBufferSize() const
+{
+    return m_imageBuffer.size();
+}
+
+unsigned int ImageWidget::currentSequence() const
+{
+    if (m_currentImageIndex >= 0 && m_currentImageIndex < m_imageBuffer.size()) {
+        return m_imageBuffer[m_currentImageIndex].sequence;
+    }
+    return 0;
+}
+
+unsigned long ImageWidget::currentTimestamp() const
+{
+    if (m_currentImageIndex >= 0 && m_currentImageIndex < m_imageBuffer.size()) {
+        return m_imageBuffer[m_currentImageIndex].timestamp;
+    }
+    return 0;
 }

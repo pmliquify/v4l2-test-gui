@@ -5,12 +5,12 @@ ProjectManager::ProjectManager()
 }
 
 bool ProjectManager::saveProject(const QString &filePath, const QList<Roi*> &rois, 
-                                bool autoFit, const QPoint &imageOffset, double scaleFactor)
+                                bool autoFit, const QPoint &imageOffset, double scaleFactor, int maxImageCount)
 {
     m_lastError.clear();
     
     // Create project JSON
-    QJsonObject projectJson = createProjectJson(rois, autoFit, imageOffset, scaleFactor);
+    QJsonObject projectJson = createProjectJson(rois, autoFit, imageOffset, scaleFactor, maxImageCount);
     
     // Create JSON document
     QJsonDocument doc(projectJson);
@@ -42,7 +42,7 @@ bool ProjectManager::saveProject(const QString &filePath, const QList<Roi*> &roi
 }
 
 bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int &nextRoiId,
-                                bool &autoFit, QPoint &imageOffset, double &scaleFactor)
+                                bool &autoFit, QPoint &imageOffset, double &scaleFactor, int &maxImageCount)
 {
     m_lastError.clear();
     qDeleteAll(rois);
@@ -51,6 +51,7 @@ bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int
     autoFit = true;
     imageOffset = QPoint(0, 0);
     scaleFactor = 1.0;
+    maxImageCount = 10;
     
     // Check if file exists
     if (!QFile::exists(filePath)) {
@@ -82,7 +83,7 @@ bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int
     }
     
     // Parse project data
-    return parseProjectJson(doc.object(), rois, nextRoiId, autoFit, imageOffset, scaleFactor);
+    return parseProjectJson(doc.object(), rois, nextRoiId, autoFit, imageOffset, scaleFactor, maxImageCount);
 }
 
 QString ProjectManager::getProjectFileFilter() const
@@ -106,7 +107,7 @@ void ProjectManager::setError(const QString &error)
 }
 
 QJsonObject ProjectManager::createProjectJson(const QList<Roi*> &rois, bool autoFit, 
-                                             const QPoint &imageOffset, double scaleFactor) const
+                                             const QPoint &imageOffset, double scaleFactor, int maxImageCount) const
 {
     QJsonObject projectJson;
     
@@ -121,6 +122,7 @@ QJsonObject ProjectManager::createProjectJson(const QList<Roi*> &rois, bool auto
     viewSettings["imageOffsetX"] = imageOffset.x();
     viewSettings["imageOffsetY"] = imageOffset.y();
     viewSettings["scaleFactor"] = scaleFactor;
+    viewSettings["maxImageCount"] = maxImageCount;
     projectJson["viewSettings"] = viewSettings;
     
     // ROI data
@@ -134,7 +136,7 @@ QJsonObject ProjectManager::createProjectJson(const QList<Roi*> &rois, bool auto
 }
 
 bool ProjectManager::parseProjectJson(const QJsonObject &json, QList<Roi*> &rois, int &nextRoiId,
-                                     bool &autoFit, QPoint &imageOffset, double &scaleFactor)
+                                     bool &autoFit, QPoint &imageOffset, double &scaleFactor, int &maxImageCount)
 {
     // Check version compatibility
     QString version = json["version"].toString();
@@ -150,6 +152,7 @@ bool ProjectManager::parseProjectJson(const QJsonObject &json, QList<Roi*> &rois
         imageOffset.setX(viewSettings["imageOffsetX"].toInt(0));
         imageOffset.setY(viewSettings["imageOffsetY"].toInt(0));
         scaleFactor = viewSettings["scaleFactor"].toDouble(1.0);
+        maxImageCount = viewSettings["maxImageCount"].toInt(10);
     }
     
     // Parse ROIs
@@ -185,5 +188,14 @@ bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int
     bool autoFit;
     QPoint imageOffset;
     double scaleFactor;
-    return loadProject(filePath, rois, nextRoiId, autoFit, imageOffset, scaleFactor);
+    int maxImageCount;
+    return loadProject(filePath, rois, nextRoiId, autoFit, imageOffset, scaleFactor, maxImageCount);
+}
+
+// Backward compatibility overload without maxImageCount
+bool ProjectManager::loadProject(const QString &filePath, QList<Roi*> &rois, int &nextRoiId,
+                                bool &autoFit, QPoint &imageOffset, double &scaleFactor)
+{
+    int maxImageCount;
+    return loadProject(filePath, rois, nextRoiId, autoFit, imageOffset, scaleFactor, maxImageCount);
 }
