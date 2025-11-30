@@ -221,7 +221,7 @@ cv::Mat convert(const Image &image, int strideOffset, bool raw)
             imageResult = imageBGR;
 
     } else {
-            imageResult = imageRAW8;
+            cvtColor(imageRAW8, imageResult, cv::COLOR_GRAY2BGR);
     }
 
     return imageResult;
