@@ -42,6 +42,7 @@
     <addaction name="actionSaveProjectAs"/>
     <addaction name="separator"/>
     <addaction name="actionSaveImage"/>
+    <addaction name="actionAutoSaveImage"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
     <property name="title">
@@ -171,6 +172,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+N</string>
+   </property>
+  </action>
+  <action name="actionAutoSaveImage">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Save Image ...</string>
    </property>
   </action>
  </widget>

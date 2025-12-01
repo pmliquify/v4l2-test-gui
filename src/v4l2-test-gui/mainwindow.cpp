@@ -24,7 +24,10 @@ MainWindow::MainWindow(QWidget *parent) :
     m_lastDir(QDir::homePath()),
     m_currentProjectFile(""),
     m_imageSlider(nullptr),
-    m_imageCountSpinBox(nullptr)
+    m_imageCountSpinBox(nullptr),
+    m_autoSaveEnabled(false),
+    m_autoSaveDir(""),
+    m_autoSaveStatus(nullptr)
 {
     ui->setupUi(this);
     
@@ -61,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     
     connect(ui->actionNewWindow, &QAction::triggered, this, &MainWindow::openNewWindow);
     connect(ui->actionSaveImage, &QAction::triggered, this, &MainWindow::saveImage);
+    connect(ui->actionAutoSaveImage, &QAction::toggled, this, &MainWindow::toggleAutoSaveImage);
     connect(ui->actionNewProject, &QAction::triggered, this, &MainWindow::newProject);
     connect(ui->actionOpenProject, &QAction::triggered, this, &MainWindow::openProject);
     connect(ui->actionSaveProject, &QAction::triggered, this, &MainWindow::saveProject);
@@ -113,6 +117,17 @@ void MainWindow::loadSettings()
     restoreGeometry(settings.value("geometry").toByteArray());
     restoreState(settings.value("windowState").toByteArray());
     m_lastDir = settings.value("lastDir", QDir::homePath()).toString();
+    m_autoSaveEnabled = settings.value("autoSaveEnabled", false).toBool();
+    m_autoSaveDir = settings.value("autoSaveDir", "").toString();
+    
+    // Restore auto-save state
+    if (m_autoSaveEnabled && !m_autoSaveDir.isEmpty() && QDir(m_autoSaveDir).exists()) {
+        ui->actionAutoSaveImage->setChecked(true);
+        updateAutoSaveStatus();
+    } else {
+        m_autoSaveEnabled = false;
+        m_autoSaveDir.clear();
+    }
 }
 
 void MainWindow::saveSettings()
@@ -122,6 +137,8 @@ void MainWindow::saveSettings()
     settings.setValue("windowState", saveState());
     settings.setValue("lastDir", m_lastDir);
     settings.setValue("lastProject", m_currentProjectFile);
+    settings.setValue("autoSaveEnabled", m_autoSaveEnabled);
+    settings.setValue("autoSaveDir", m_autoSaveDir);
 }
 
 void MainWindow::loadLastProject()
@@ -220,6 +237,20 @@ void MainWindow::onImageReceived(const Image &image)
     if (m_imageConverted) {
         m_imageWidget->setImage(cvImage, image.sequence(), image.timestamp());
         
+        // Auto-save if enabled
+        if (m_autoSaveEnabled && !m_autoSaveDir.isEmpty()) {
+            QImage qImage = m_imageWidget->qImage();
+            if (!qImage.isNull()) {
+                // Build filename: sequencenumber_timestamp_YYYYMMDD_hhmmss.png
+                QDateTime now = QDateTime::currentDateTime();
+                QString fileName = QString("%1_%2_%3.png")
+                    .arg(image.sequence(), 5, 10, QChar('0'))
+                    .arg(image.timestamp(), 8, 10, QChar('0'))
+                    .arg(now.toString("yyyyMMdd_hhmmss"));
+                QString fullPath = QDir(m_autoSaveDir).filePath(fileName);
+                saveImageToFile(qImage, fullPath);
+            }
+        }
     } else {
         update();
     }
@@ -269,7 +300,48 @@ void MainWindow::saveImage()
 
     QFileInfo fi(fileName);
     m_lastDir = fi.absolutePath();
-    image.save(fileName);
+    saveImageToFile(image, fileName);
+}
+
+void MainWindow::toggleAutoSaveImage(bool checked)
+{
+    if (checked) {
+        // Open folder selection dialog
+        QString dir = QFileDialog::getExistingDirectory(this,
+            tr("Select Auto-Save Directory"), 
+            m_autoSaveDir.isEmpty() ? m_lastDir : m_autoSaveDir,
+            QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
+        
+        if (dir.isEmpty()) {
+            // User cancelled - uncheck the action
+            ui->actionAutoSaveImage->setChecked(false);
+            return;
+        }
+        
+        m_autoSaveEnabled = true;
+        m_autoSaveDir = dir;
+        m_lastDir = dir;
+    } else {
+        // Disable auto-save
+        m_autoSaveEnabled = false;
+    }
+    
+    updateAutoSaveStatus();
+}
+
+bool MainWindow::saveImageToFile(const QImage& image, const QString& filePath)
+{
+    return image.save(filePath);
+}
+
+void MainWindow::updateAutoSaveStatus()
+{
+    if (m_autoSaveEnabled && !m_autoSaveDir.isEmpty()) {
+        m_autoSaveStatus->setText(tr("Autosave: %1").arg(m_autoSaveDir));
+        m_autoSaveStatus->setVisible(true);
+    } else {
+        m_autoSaveStatus->setVisible(false);
+    }
 }
 
 void MainWindow::setAllwaysOnTop(bool checked)
@@ -295,6 +367,11 @@ void MainWindow::decreaseStride()
 
 void MainWindow::setupStatusBar()
 {
+    // Auto-save status label (before port, permanent)
+    m_autoSaveStatus = new QLabel(this);
+    m_autoSaveStatus->setVisible(false);
+    statusBar()->addPermanentWidget(m_autoSaveStatus);
+    
     m_port = new QSpinBox(this);
     m_port->setPrefix(tr("Port: "));
     m_port->setFocusPolicy(Qt::NoFocus);

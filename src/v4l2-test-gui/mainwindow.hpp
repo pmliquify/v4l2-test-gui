@@ -22,6 +22,7 @@ private slots:
     void onDisconnected();
     void setShowRawImage(bool checked);
     void saveImage();
+    void toggleAutoSaveImage(bool checked);
     void setAllwaysOnTop(bool checked);
     void increaseStride();
     void decreaseStride();
@@ -51,6 +52,9 @@ private:
     QString         m_currentProjectFile;
     QSlider*        m_imageSlider;
     QSpinBox*       m_imageCountSpinBox;
+    bool            m_autoSaveEnabled;
+    QString         m_autoSaveDir;
+    QLabel*         m_autoSaveStatus;
 
     void setupStatusBar();
     void loadSettings();
@@ -61,6 +65,8 @@ private:
     void createFunctionDock(QWidget* functionWidget, const QString& title);
     void removeFunctionDock(QWidget* functionWidget);
     void setupImageNavigationBar();
+    void updateAutoSaveStatus();
+    bool saveImageToFile(const QImage& image, const QString& filePath);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
