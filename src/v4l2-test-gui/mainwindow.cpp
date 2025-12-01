@@ -27,7 +27,9 @@ MainWindow::MainWindow(QWidget *parent) :
     m_imageCountSpinBox(nullptr),
     m_autoSaveEnabled(false),
     m_autoSaveDir(""),
-    m_autoSaveStatus(nullptr)
+    m_autoSaveStatus(nullptr),
+    m_propertyBrowserDock(nullptr),
+    m_imageHistoryDock(nullptr)
 {
     ui->setupUi(this);
     
@@ -43,11 +45,11 @@ MainWindow::MainWindow(QWidget *parent) :
     
     // Create property browser dock widget
     PropertyBrowser *propertyBrowser = new PropertyBrowser(this);
-    QDockWidget *dock = new QDockWidget(tr("Properties"), this);
-    dock->setObjectName("PropertiesDock");
-    dock->setWidget(propertyBrowser);
-    dock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    addDockWidget(Qt::RightDockWidgetArea, dock);
+    m_propertyBrowserDock = new QDockWidget(tr("Properties"), this);
+    m_propertyBrowserDock->setObjectName("PropertiesDock");
+    m_propertyBrowserDock->setWidget(propertyBrowser);
+    m_propertyBrowserDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    addDockWidget(Qt::RightDockWidgetArea, m_propertyBrowserDock);
     connect(m_imageWidget, &ImageWidget::roiSelectionChanged, propertyBrowser, &PropertyBrowser::onRoiSelectionChanged);
     connect(propertyBrowser, &PropertyBrowser::propertyValueChanged, m_imageWidget, &ImageWidget::updateFunctions);
     connect(m_imageWidget, &ImageWidget::functionWidgetCreated, this, &MainWindow::createFunctionDock);
@@ -73,6 +75,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionAllwaysOnTop, &QAction::toggled, this, &MainWindow::setAllwaysOnTop);
     connect(ui->actionIncreaseStride, &QAction::triggered, this, &MainWindow::increaseStride);
     connect(ui->actionDecreaseStride, &QAction::triggered, this, &MainWindow::decreaseStride);
+    connect(ui->actionShowPropertyBrowser, &QAction::toggled, this, &MainWindow::togglePropertyBrowser);
+    connect(ui->actionShowImageHistory, &QAction::toggled, this, &MainWindow::toggleImageHistory);
     connect(&m_server, &SocketServer::imageReceived, this, &MainWindow::onImageReceived);
     connect(&m_server, &SocketServer::disconnected, this, &MainWindow::onDisconnected);
 
@@ -120,6 +124,19 @@ void MainWindow::loadSettings()
     m_autoSaveEnabled = settings.value("autoSaveEnabled", false).toBool();
     m_autoSaveDir = settings.value("autoSaveDir", "").toString();
     
+    // Restore visibility settings
+    bool showPropertyBrowser = settings.value("showPropertyBrowser", true).toBool();
+    bool showImageHistory = settings.value("showImageHistory", true).toBool();
+    ui->actionShowPropertyBrowser->setChecked(showPropertyBrowser);
+    ui->actionShowImageHistory->setChecked(showImageHistory);
+    
+    // Restore always on top setting
+    bool alwaysOnTop = settings.value("alwaysOnTop", false).toBool();
+    ui->actionAllwaysOnTop->setChecked(alwaysOnTop);
+    if (alwaysOnTop) {
+        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+    }
+    
     // Restore auto-save state
     if (m_autoSaveEnabled && !m_autoSaveDir.isEmpty() && QDir(m_autoSaveDir).exists()) {
         ui->actionAutoSaveImage->setChecked(true);
@@ -139,6 +156,9 @@ void MainWindow::saveSettings()
     settings.setValue("lastProject", m_currentProjectFile);
     settings.setValue("autoSaveEnabled", m_autoSaveEnabled);
     settings.setValue("autoSaveDir", m_autoSaveDir);
+    settings.setValue("showPropertyBrowser", ui->actionShowPropertyBrowser->isChecked());
+    settings.setValue("showImageHistory", ui->actionShowImageHistory->isChecked());
+    settings.setValue("alwaysOnTop", ui->actionAllwaysOnTop->isChecked());
 }
 
 void MainWindow::loadLastProject()
@@ -482,12 +502,12 @@ void MainWindow::setupImageNavigationBar()
     navLayout->addWidget(m_imageSlider, 1);  // Give slider more space
     
     // Add navigation bar to bottom of main window
-    QDockWidget *navDock = new QDockWidget(this);
-    navDock->setObjectName("ImageNavigationDock");
-    navDock->setWidget(navWidget);
-    navDock->setFeatures(QDockWidget::NoDockWidgetFeatures);  // Fixed, non-closable
-    navDock->setTitleBarWidget(new QWidget()); // Hide title bar
-    addDockWidget(Qt::BottomDockWidgetArea, navDock);
+    m_imageHistoryDock = new QDockWidget(this);
+    m_imageHistoryDock->setObjectName("ImageNavigationDock");
+    m_imageHistoryDock->setWidget(navWidget);
+    m_imageHistoryDock->setFeatures(QDockWidget::NoDockWidgetFeatures);  // Fixed, non-closable
+    m_imageHistoryDock->setTitleBarWidget(new QWidget()); // Hide title bar
+    addDockWidget(Qt::BottomDockWidgetArea, m_imageHistoryDock);
     
     // Connect signals
     connect(m_imageCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
@@ -520,4 +540,18 @@ void MainWindow::updateStatusBarImageInfo(int index, unsigned int sequence, unsi
         .arg(m_fps, 0, 'f', 1)
         .arg(sequence, 5, 10, QChar('0'))
         .arg(timestamp, 8));
+}
+
+void MainWindow::togglePropertyBrowser(bool checked)
+{
+    if (m_propertyBrowserDock) {
+        m_propertyBrowserDock->setVisible(checked);
+    }
+}
+
+void MainWindow::toggleImageHistory(bool checked)
+{
+    if (m_imageHistoryDock) {
+        m_imageHistoryDock->setVisible(checked);
+    }
 }

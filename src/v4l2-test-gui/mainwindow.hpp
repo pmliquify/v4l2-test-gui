@@ -33,6 +33,8 @@ private slots:
     void openNewWindow();
     void updateImageNavigationUI(int current, int max);
     void updateStatusBarImageInfo(int index, unsigned int sequence, unsigned long timestamp);
+    void togglePropertyBrowser(bool checked);
+    void toggleImageHistory(bool checked);
 
 private:
     Ui::MainWindow* ui;
@@ -55,6 +57,8 @@ private:
     bool            m_autoSaveEnabled;
     QString         m_autoSaveDir;
     QLabel*         m_autoSaveStatus;
+    QDockWidget*    m_propertyBrowserDock;
+    QDockWidget*    m_imageHistoryDock;
 
     void setupStatusBar();
     void loadSettings();
