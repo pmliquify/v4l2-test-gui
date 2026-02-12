@@ -122,6 +122,10 @@ void ImageWidget::setImage(const cv::Mat& image, unsigned int sequence, unsigned
 
 void ImageWidget::fitImageToWidget() 
 {
+    if (m_image.empty()) {
+        return;
+    }
+    
     double widthRatio = (double)width() / m_image.cols;
     double heightRatio = (double)height() / m_image.rows;
     m_scaleFactor = qMin(widthRatio, heightRatio);
