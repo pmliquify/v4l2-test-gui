@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Peter Martienssen
+// SPDX-License-Identifier: MIT
+
 #include "histogram.hpp"
 #include "functionplugin.hpp"
 #include <opencv2/opencv.hpp>

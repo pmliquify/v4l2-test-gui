@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Peter Martienssen
+// SPDX-License-Identifier: MIT
+
 #include "imagewidget.hpp"
 #include "mainwindow.hpp"
 #include "convert.hpp"
